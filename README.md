@@ -1,5 +1,7 @@
 # trimdata — baseline handoff for multimodal instruction-data selection
 
+> **New agent or collaborator? Start with [`AGENTS.md`](AGENTS.md)** (orientation, map, lessons), then [`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) (your task list).
+
 Research code, baseline checkpoints and exact data selections for a study of instruction-data selection for
 LLaVA-1.5-7B. This repository lets a collaborator finish the **baseline side** of the study without retraining runs
 that are already complete.
