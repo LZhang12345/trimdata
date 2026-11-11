@@ -1,0 +1,248 @@
+{
+ "schema": "trimdata-agent-contract-v1",
+ "contract_doc": "AGENT_CONTRACT.md",
+ "inputs": {
+  "code": "this repository src/ (SOURCE_MANIFEST.json)",
+  "checkpoints_hf_model_repo": "submissionpaper1234/trimdata-baseline-checkpoints",
+  "selections_hf_dataset_repo": "submissionpaper1234/trimdata-baseline-selections",
+  "training_json": {
+   "repo": "liuhaotian/LLaVA-Instruct-150K",
+   "file": "llava_v1_5_mix665k.json",
+   "revision": "9d451dc7629cfe0469f6ae4432b765cd603d5fcb",
+   "sha256": "ce959ce6e23073ee1cd1a8a2ef1c633768c10d4174327b8b2dc7113b91af6cf8"
+  },
+  "llava_commit": "c121f0432da27facab705978f83c4ada465e46fd",
+  "reference_scores": [
+   "results/baseline_core4_per_run.csv",
+   "results/baseline_extended_reported.csv"
+  ]
+ },
+ "invariants": {
+  "global_batch": 128,
+  "epochs": 1,
+  "natural_steps": "(K+3)//4//32",
+  "lora": {
+   "r": 128,
+   "alpha": 256,
+   "dropout": 0.05,
+   "lr": 0.0002
+  },
+  "mm_projector_lr": 2e-05,
+  "schedule": "cosine",
+  "warmup_ratio": 0.03,
+  "weight_decay": 0,
+  "model_max_length": 2048,
+  "precision": "fp16",
+  "attention": "eager",
+  "deepspeed": "zero3",
+  "training_seeds": [
+   17,
+   29,
+   43
+  ],
+  "budgets": {
+   "b05": 33032,
+   "b10": 66076,
+   "b15": 99108,
+   "b20": 132147
+  },
+  "core_banks": {
+   "POPE": 8910,
+   "GQA_testdev_balanced": 12578,
+   "TextVQA_val": 5000,
+   "ScienceQA_IMG": 2017
+  },
+  "gqa_main_score": "native normalized score after convert_gqa_for_eval (not unconverted)",
+  "decoding": "greedy, temperature 0, num_beams 1, fp16, batch 1, LoRA unmerged",
+  "extended": [
+   "MME_P",
+   "MME_C",
+   "SEED_img",
+   "MMMU",
+   "MMBench",
+   "LLaVA_W",
+   "MM_Vet",
+   "VizWiz"
+  ],
+  "judge": "gpt-4o-2024-08-06, temperature 0, one run",
+  "no_baseline_tuning": true,
+  "no_eval_label_leakage": true,
+  "report_all_seeds_and_failures": true
+ },
+ "gate": {
+  "id": "T0",
+  "T0a": {
+   "reevaluate": [
+    "uniform/b10/sel1234-t17",
+    "datatailor/b10/sel1234-t17"
+   ],
+   "tolerance": {
+    "core_avg": 0.1,
+    "per_bank": 0.3
+   },
+   "reference_uniform": {
+    "avg": 65.23,
+    "POPE": 84.77,
+    "GQA": 55.49,
+    "TextVQA": 52.86,
+    "SQA_img": 67.82
+   }
+  },
+  "T0b": {
+   "retrain": "uniform/b10/sel1234-t17",
+   "selection": "selections/uniform/b10/sel1234",
+   "K": 66076,
+   "steps": 516,
+   "tolerance": {
+    "core_avg": 0.3,
+    "per_bank": 1.0
+   },
+   "reference_avg": 65.23
+  },
+  "on_fail": "stop and report"
+ },
+ "tasks": [
+  {
+   "id": "T1",
+   "depends_on": [
+    "T0"
+   ],
+   "action": "evaluate",
+   "cells": [
+    "coincide/b20/selfixed-t29",
+    "coincide/b20/selfixed-t43"
+   ],
+   "suites": [
+    "core4",
+    "extended8"
+   ],
+   "also": "extended8 for coincide/b20/selfixed-t17"
+  },
+  {
+   "id": "T2",
+   "depends_on": [
+    "T0"
+   ],
+   "action": "train+evaluate",
+   "method": "uniform",
+   "budget": "b20",
+   "K": 132147,
+   "selection": "selections/uniform/b20/sel1235",
+   "training_seeds": [
+    29
+   ],
+   "steps": 1032
+  },
+  {
+   "id": "T3",
+   "depends_on": [
+    "T0"
+   ],
+   "action": "train+evaluate",
+   "method": "datatailor",
+   "budget": "b15",
+   "K": 99108,
+   "selection": "selections/datatailor/b15/sel1234",
+   "training_seeds": [
+    17
+   ],
+   "steps": 774
+  },
+  {
+   "id": "T4",
+   "depends_on": [
+    "T0"
+   ],
+   "action": "select+train+evaluate",
+   "method": "ICONS (faithful)",
+   "official_commit": "b8ce8c86d7b098836a84ec2b40d259195b7f4494",
+   "budgets": [
+    "b10",
+    "b05",
+    "b20"
+   ],
+   "order": "b10 first",
+   "training_seeds": [
+    17,
+    29,
+    43
+   ],
+   "extra_deliverable": "ICONS_FIDELITY.md"
+  },
+  {
+   "id": "T5",
+   "depends_on": [
+    "T0"
+   ],
+   "action": "evaluate",
+   "suites": [
+    "extended8"
+   ],
+   "cells": "every provided checkpoint lacking extended scores (README Coauthor plan step 5) + all new T2-T4 checkpoints"
+  },
+  {
+   "id": "T6",
+   "optional": true,
+   "depends_on": [
+    "T0"
+   ],
+   "action": "select+train+evaluate",
+   "method": "LESS (faithful)",
+   "official_commit": "8abf9628b9a814ac3045445eebc8ba3c908fdc78",
+   "budgets": [
+    "b10"
+   ],
+   "training_seeds": [
+    17,
+    29,
+    43
+   ],
+   "extra_deliverable": "LESS_FIDELITY.md"
+  },
+  {
+   "id": "T7",
+   "optional": true,
+   "depends_on": [
+    "T0"
+   ],
+   "action": "select+train+evaluate",
+   "method": "source_sqrt",
+   "selector": "src/experiments/root_native_campaign_v7_20261024/selection.py",
+   "selection_seed": 1234,
+   "budgets": [
+    "b05",
+    "b20"
+   ],
+   "training_seeds": [
+    17,
+    29,
+    43
+   ]
+  }
+ ],
+ "outputs": {
+  "results_csv": "results/coauthor/RESULTS.csv (columns of results/RESULTS_TEMPLATE.csv; one row per cell + one per failed attempt)",
+  "run_log": "results/coauthor/RUN_LOG.md",
+  "calibration": "results/coauthor/CALIBRATION_REPORT.md",
+  "checkpoints": "own HF repo, layout <method>/<bNN>/<selXXXX|selfixed>-t<seed>/ + provenance.json + core-4 prediction files",
+  "selections": "record_ids.json + selection_meta.json in dataset-repo layout",
+  "handback": "pull request to LZhang12345/trimdata (no weights in Git)"
+ },
+ "stop_and_ask": [
+  "T0 fails",
+  "input hash mismatch",
+  "official code needs a changed selection unit/features/defaults",
+  "different global batch or step count needed",
+  "implausible result before correctness checks",
+  "adding or dropping any cell"
+ ],
+ "prohibited": [
+  "baseline hyper-parameter search",
+  "changing K/epochs/steps/decoding/scorers",
+  "eval-label leakage",
+  "best-seed-only reporting",
+  "overwriting provided artifacts",
+  "committing credentials",
+  "re-hosting LLaVA-665K text or images"
+ ]
+}
