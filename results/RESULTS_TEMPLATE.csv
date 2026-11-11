@@ -1,0 +1,1 @@
+method,budget,K,selection_seed,training_seed,POPE,GQA,TextVQA,SQA_img,avg,MME_P,MME_C,SEED_img,MMMU,MMBench,LLaVA_W,MM_Vet,VizWiz,global_steps,natural_steps,gpu_type,num_gpus_per_run,train_gpu_hours,eval_gpu_hours,selection_gpu_hours,failed_attempt_gpu_hours,checkpoint_sha256,selection_records_sha256,code_commit,notes
