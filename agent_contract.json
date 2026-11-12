@@ -549,10 +549,13 @@
   "T5",
   "T2",
   "T3",
-  "T4",
+  "T4:b10",
   "T9",
   "T10",
+  "LEAD_CHECKPOINT",
   "T8",
+  "T4:b05+b20",
+  "APPROVED_EXTRA_BUDGETS",
   "T6",
   "T7",
   "T11"
@@ -580,5 +583,7 @@
   "overwriting provided checkpoints/selections; editing executed sources in src/",
   "training with plain llava/train/train.py, train_mem.py or scripts/reference_train_command.sh",
   "committing tokens/API keys; re-hosting LLaVA-665K text or images"
- ]
+ ],
+ "sequence_doc": "AGENTS.md section 3a",
+ "scheduling_rule": "when a GPU is free, start the highest-priority item whose dependencies are met; selection-side compute of T4/T9/T10 may run from day 0 without a gate"
 }

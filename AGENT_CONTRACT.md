@@ -158,7 +158,11 @@ Capacity is ≈190 GPU-h per day; the full roster in §6 is on the order of 900�
 * On any gate failure: **stop** the dependent tasks and report the deltas, environment (`pip freeze`), GPU/driver and
   logs in `CALIBRATION_REPORT.md`. Tasks whose gate passed may continue.
 
-## 6. Tasks (priority order)
+## 6. Tasks
+Execution sequence (binding): `AGENTS.md` §3a. Summary: T0 → T1 → T5 → T2 → T3 → T4 (10%) → T9 → T10 → lead
+checkpoint → T8 → T4 (5%/20%) → approved extra budgets → optional T6, T7, T11. Selection-side compute of T4/T9/T10 runs in
+parallel from day 0.
+
 | ID | Task | Gate | Inputs | Deliverable | Rough A100 GPU-h |
 |---|---|---|---|---|---|
 | T0 | Calibration T0a, T0b, T0c (§5) | — | 2 checkpoints, 1 selection | 3 calibration rows + `CALIBRATION_REPORT.md` | ~25 |
