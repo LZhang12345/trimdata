@@ -70,6 +70,12 @@
    "datatailor_provided": {
     "repo": "Yuqifan1117/DataTailor",
     "commit": "d6fa5eb6bc2920a561c614abb6b841a128affb92"
+   },
+   "visnec": {
+    "repo": "DMK041218/VisNec",
+    "commit": "d894598ef9ba3e03da847a47464185c6262d230f",
+    "license": "none in repo (research reproduction only; do not vendor)",
+    "released_selection": "HF dataset aaakiyasuqqqa/VisNec: llava_v1.5-7b-top15.json"
    }
   },
   "hf_revisions": {
@@ -395,6 +401,37 @@
    "gpu_h": "~3 per checkpoint"
   },
   {
+   "id": "T12",
+   "required": true,
+   "depends_on": {
+    "selection": [],
+    "students": [
+     "T0b"
+    ]
+   },
+   "action": "select+train+evaluate",
+   "method": "VisNec (faithful)",
+   "pin": {
+    "repo": "DMK041218/VisNec",
+    "commit": "d894598ef9ba3e03da847a47464185c6262d230f",
+    "license": "none in repo (research reproduction only; do not vendor)",
+    "released_selection": "HF dataset aaakiyasuqqqa/VisNec: llava_v1.5-7b-top15.json"
+   },
+   "scoring": "scripts/cal_visnec.py exactly as scripts/cal_visnec.sh, on the 660,763 eligible records",
+   "selection": "scripts/task_distribution.py unchanged except paths and TOP_RATIO=0.10; keep realised K (no top-up); deterministic",
+   "fidelity_check": "TOP_RATIO=0.15 on full llava_v1_5_mix665k.json vs released llava_v1.5-7b-top15.json overlap; stop and ask if far below ~90%",
+   "budgets_seeds": {
+    "b10": [
+     17,
+     29,
+     43
+    ]
+   },
+   "label": "VisNec (disclose eligible-pool restriction and 10% ratio); other deviations -> VisNec-adapted",
+   "fidelity_note": "VISNEC_FIDELITY.md",
+   "gpu_h": "~80-160"
+  },
+  {
    "id": "T9",
    "required": true,
    "depends_on": {
@@ -550,6 +587,7 @@
   "T2",
   "T3",
   "T4:b10",
+  "T12",
   "T9",
   "T10",
   "LEAD_CHECKPOINT",
@@ -560,7 +598,7 @@
   "T7",
   "T11"
  ],
- "after_new_baselines_10pct": "report and ask the lead which 1-2 of ICONS/XMAS/CoIDO get 5%/20% runs",
+ "after_new_baselines_10pct": "report ICONS/VisNec/XMAS/CoIDO 10% results and ask the lead which get 5%/20% runs",
  "outputs": {
   "results_csv": "results/coauthor/RESULTS.csv (columns of results/RESULTS_TEMPLATE.csv; one row per cell + one per failed attempt)",
   "run_log": "results/coauthor/RUN_LOG.md",
