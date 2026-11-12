@@ -6,7 +6,7 @@ lessons learned so far. It is written so that an agent with no prior context can
 
 ## 0. Read in this order
 1. **This file** — orientation, map, status, lessons.
-2. [`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) — your **binding work order** (scope, inputs, fixed protocol, calibration
+2. [`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) — your **binding work order** for 8× A100 80GB (scope, inputs, fixed protocol, calibration
    gate, tasks T0–T7, outputs, acceptance criteria, stop-and-ask rules). Machine-readable: [`agent_contract.json`](agent_contract.json).
 3. [`README.md`](README.md) — full recipe, evaluation protocol, results tables, checkpoint/selection index, known gaps.
 4. Only then open `src/` (see the map below) for the exact code that produced each result.
@@ -19,8 +19,9 @@ Fine-tune LLaVA-1.5-7B (stage 2, LoRA, one natural epoch, fixed recipe) on a **s
 conversations of `llava_v1_5_mix665k.json`, chosen by a data-selection method under a fixed **selected-data budget K**
 (5% = 33,032; 10% = 66,076, the anchor; 15% = 99,108; 20% = 132,147). Compare selection methods by the trained model's
 scores on four full official benchmarks (POPE, GQA, TextVQA, ScienceQA-IMG; 28,505 questions) and an eight-benchmark
-extended suite. Baselines: Uniform random (the random baseline), source-sqrt, COINCIDE, DataTailor, LESS (only an
-approximation exists so far), ICONS (not yet run). The project's own method is developed elsewhere and is **not** part
+extended suite. Provided baselines: Uniform random (the random baseline), source-sqrt, COINCIDE, DataTailor,
+LESS-approx (not faithful LESS). Still to run (your tasks): ICONS, XMAS, CoIDO, a full-data reference, optionally faithful
+LESS and PreSel. The project's own method is developed elsewhere and is **not** part
 of this repository; your job is the baselines.
 
 ## 2. Map of everything
@@ -36,8 +37,12 @@ of this repository; your job is the baselines.
 | `index/checkpoints.csv`, `index/selections.csv` | machine-readable indices of the HF artifacts (paths, K, seeds, sha256) | locating inputs |
 | `scripts/reconstruct_records.py` | rebuilds a selection's training `records.json` byte-for-byte from the public LLaVA-665K json | before every training run |
 | `scripts/verify_sha256.py` | checks downloaded files against `SHA256SUMS` | after every download |
-| `scripts/reference_train_command.sh`, `scripts/zero3.json` | the training recipe restated for the official LLaVA entry point (a reconstruction for convenience, not the executed driver) | training |
-| `env/requirements-native-env.txt` | package pins of the executed environment | setup |
+| `scripts/train_portable.py` | **the only allowed training entry point**: official LLaVA c121 trainer + the three runtime changes our runs used (see lesson 19); single-GPU by default, aborts on wrong step count or wrong LR groups | every training run |
+| `scripts/eval_portable.py` | runs an official `llava.eval.*` generation module with our inference settings (LoRA unmerged, eager attention, fp16) | every evaluation |
+| `scripts/zero3.json` | DeepSpeed ZeRO-3 config (byte-identical to the executed one) | used by `train_portable.py` |
+| `tests/test_optimizer_group_lr.py` | CPU-only demonstration of the optimizer-group bug and the fix (seconds) | sanity check after setup |
+| `scripts/reference_train_command.sh` | read-only list of the training arguments; **do not train with it** | reference |
+| `env/requirements-native-env.txt` | exact package pins of the executed environment (incl. `xformers==0.0.23.post1`) | setup |
 | `docs/EVAL_INPUTS.md` | evaluation input files and hashes | evaluation |
 | `PATHS.md` | cluster paths that appear inside `src/` and what to substitute | reading `src/` |
 | `SOURCE_MANIFEST.json` | sha256 of every file in `src/` (and its pre-rename hash) | provenance |
@@ -50,7 +55,9 @@ labels, not meaningful):**
 | Training arguments (the recipe) | `src/experiments/helper_tool1_baseline_train_v4_20261102/model.py::arguments`; same recipe in `src/experiments/root_native_campaign_v7_20261024/config.py` |
 | Training driver used for 5%/15%/20% and newer cells | `src/experiments/helper_tool1_baseline_train_v10_20261108/` |
 | Core-four evaluator | `src/experiments/helper_tool1_baseline_eval_v4_20261105/` (+ `_v5_`, `_t3coin_v2_` variants for specific producers) |
-| Extended-suite evaluators / scorers / judge | `src/experiments/helper_tool1_bench4_*`, `helper_tool1_bench6_*`, `helper_tool1_cells_v7_extsuite_20261110`, `helper_tool1_vizwiz_score_v1_20261101` |
+| Training runtime changes reused by `train_portable.py` | `src/experiments/root_native_campaign_v7_20261024/{structured_preprocess,optimizer_groups,runtime_guards}.py`; deterministic CUTLASS attention: `root_native_deterministic_attention_v{1,2}_*` |
+| Extended-suite bank definitions, prompts, judge | `src/experiments/helper_tool1_bench6_eval_v1_20261103/banks6.py` (MME, SEED), `helper_tool1_bench4_eval_v1_20261104/banks4.py` (MMMU, LLaVA-W, MM-Vet, MMBench), `helper_tool1_bench4_judge_v13_20261105/judge4_v13.py` (judge prompts/settings), `helper_tool1_vizwiz_score_v1_20261101/scorer.py`; drivers: `helper_tool1_bench4_*`, `helper_tool1_bench6_*`, `helper_tool1_cells_v7_extsuite_20261110` |
+| Vendored LLaVA c121 (`llava/` package) | `src/collaboration/published-foundation-20261022/reference_sources/LLaVA/c121f0432da27facab705978f83c4ada465e46fd/` |
 | Uniform / source-sqrt selector | `src/experiments/root_native_campaign_v7_20261024/selection.py`; matched-K Uniform: `helper_tool1_uniform_matchedk_build_v1_20261102` |
 | COINCIDE (adapted) | `src/experiments/copilot7_coincide_native_*` and `src/collaboration/*/reference_sources/` (upstream code) |
 | DataTailor (official) | `src/experiments/root_dt_formal_selection_v2_20261026`, `copilot7_datatailor_*`, upstream in `reference_sources/` |
@@ -72,12 +79,16 @@ Download only what a task needs, e.g.
 `hf download submissionpaper1234/trimdata-baseline-checkpoints --include "uniform/b10/sel1234-t17/*" --local-dir ckpts`.
 
 ## 3. Status at hand-over
-* **Complete and provided:** 46 checkpoints (43 evaluated on the core four). Full 3-seed coverage at 10% for Uniform
+* **Complete and provided:** 46 checkpoints (44 evaluated on the core four; COINCIDE 20% t29/t43 are not). Full 3-seed coverage at 10% for Uniform
   (3 selection sets × 3 training seeds), source-sqrt, COINCIDE, DataTailor, LESS-approx and Uniform scored-random;
   5% Uniform/DataTailor/COINCIDE ×3; 15% Uniform ×3, DataTailor t29/t43; 20% DataTailor ×3, COINCIDE ×3, Uniform t17/t43.
-* **Your tasks** (details and order in the contract): T0 calibration gate → T1 evaluate COINCIDE 20% t29/t43 → T2 Uniform
-  20% t29 → T3 DataTailor 15% t17 → T4 faithful ICONS (10%, then 5%/20%) → T5 missing extended-suite scores →
-  optional T6 faithful LESS, T7 source-sqrt at 5%/20%.
+* **Evaluation outputs provided:** every evaluated checkpoint folder has `eval/core4/<bank>/PREDICTIONS.jsonl` and
+  `SCORE.json`; 27 also have extended-suite predictions/scores (22 with all eight). Use them for calibration.
+* **Your tasks** (details, gates and order in the contract): T0 calibration (T0a evaluation, T0c extended suite, T0b
+  training) → T1 evaluate COINCIDE 20% → T5 missing extended-suite scores (24 checkpoints listed) → T2 Uniform 20% t29 →
+  T3 DataTailor 15% t17 → T4 faithful ICONS → T9 faithful XMAS → T10 faithful CoIDO → T8 full-data reference →
+  optional T6 faithful LESS, T7 source-sqrt at 5%/20%, T11 PreSel-adapted (approval first). Selection-side compute of
+  T4/T9/T10 can start on day 0 in parallel with calibration.
 * **Not yours:** the project's own method, the paper, any change of protocol.
 
 ## 4. Lessons learned (read before running anything)
@@ -94,8 +105,9 @@ Download only what a task needs, e.g.
 6. **Labels must match fidelity.** `less_approx` (count-sketch SGD gradients, 3×Uniform pre-filter, two benchmark-aligned
    targets) is *not* LESS; COINCIDE here is an adaptation of the authors' feature route to this pool. Any new deviation
    needs its own label.
-7. **Evaluate LoRA unmerged** (PEFT 0.7.1, fp16) to reproduce our numbers; the official builder merges the LoRA and can
-   differ slightly. T0a tells you whether that matters on your hardware.
+7. **Evaluate LoRA unmerged** (PEFT 0.7.1, fp16, eager attention) to reproduce our numbers; the official builder merges
+   the LoRA and only takes the LoRA branch if the folder name contains "llava" and "lora" (ours do not).
+   `scripts/eval_portable.py` handles all three. T0a tells you whether anything else matters on your hardware.
 8. **Extended-suite judge** is `gpt-4o-2024-08-06` (temperature 0, one run), not the original GPT-4 judges, so
    LLaVA-W / MM-Vet numbers are not comparable with published ones.
 
@@ -124,9 +136,22 @@ Download only what a task needs, e.g.
     scheduler, RNG and data-loader position; otherwise restart the run. Verify on one run before relying on it.
 18. **Account for everything.** Record GPU-hours for selection, training, evaluation and failed attempts separately; the
     results template has columns for each.
+19. **Never train with plain LLaVA `train.py`/`train_mem.py`.** Our runs added three runtime changes: (a) LLaVA's xformers
+    attention patch with CUTLASS kernels and deterministic settings; (b) structured v1 label masking (the official
+    `preprocess_v1` splits on text and mis-masks turns containing a role marker such as "USER:"); (c) removal of the
+    empty LoRA-bias optimizer group before the scheduler is built. Without (c), DeepSpeed 0.12.6 drops that group after
+    the cosine scheduler captured four learning rates, and with torch 2.1.2's silent `zip` the **projector weights
+    train at 2e-4 instead of 2e-5** (reproduced in a CPU simulation). `scripts/train_portable.py` applies all three
+    and aborts if the projector/LoRA LR ratio is not 0.1.
+20. **Calibrate against the right producer.** The 10% Uniform-sel1234 / source-sqrt / COINCIDE runs came from an older
+    driver that used xformers' default kernels; the Tool1-v4 runs (Uniform sel1235/1236, DataTailor, budget cells)
+    forced deterministic CUTLASS, like `train_portable.py`. That is why T0b retrains `uniform/b10/sel1235-t17`.
+21. **One GPU per run on A100s.** Run eight independent single-GPU jobs side by side. Launching the reference command on
+    eight GPUs gives global batch 1,024 and a different step count; only the full-data reference may use data
+    parallelism, with global batch kept at 128.
 
 ## 5. How to report back
-Follow `AGENT_CONTRACT.md` §6: `results/coauthor/RESULTS.csv` (template schema, one row per run plus one per failed
-attempt), `RUN_LOG.md`, `CALIBRATION_REPORT.md`, fidelity notes for ICONS/LESS, and new checkpoints/selections uploaded
+Follow `AGENT_CONTRACT.md` §7: `results/coauthor/RESULTS.csv` (template schema, one row per run plus one per failed
+attempt), `RUN_LOG.md`, `CALIBRATION_REPORT.md`, fidelity notes for ICONS/XMAS/CoIDO (and LESS/PreSel if run), and new checkpoints/selections uploaded
 to a Hugging Face repo you control in the same layout. Open a pull request to this repository; do not commit weights,
 tokens or API keys.

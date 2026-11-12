@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# Reference reconstruction of the executed training arguments (see README "Training recipe").
-# NOT the script we ran: our runs used src/experiments/helper_tool1_baseline_train_v4_20261102/model.py (v4/v10 drivers).
-# Usage: bash reference_train_command.sh <records.json> <image_root> <output_dir> <training_seed>
+# READ-ONLY REFERENCE. Do NOT use this for new runs: use scripts/train_portable.py (see AGENT_CONTRACT.md section 3).
+# It lists the executed training arguments for the official LLaVA entry point, but plain train.py / train_mem.py
+# lack the three runtime changes our runs used (xformers CUTLASS attention with deterministic settings, structured
+# v1 label masking, pre-scheduler removal of the empty optimizer group). Without the last one the projector weights
+# train at the LoRA learning rate (2e-4) instead of 2e-5. train_portable.py applies all three.
+# It is single-GPU only (per-device 4 x accumulation 32 = global batch 128); launching it on 8 GPUs gives global
+# batch 1024 and a wrong step count.
+# Usage (reference only): bash reference_train_command.sh <records.json> <image_root> <output_dir> <training_seed>
 set -euo pipefail
 DATA=$1; IMAGES=$2; OUT=$3; SEED=$4
 deepspeed --num_gpus 1 llava/train/train_mem.py \
@@ -20,5 +25,4 @@ deepspeed --num_gpus 1 llava/train/train_mem.py \
   --model_max_length 2048 --gradient_checkpointing True --dataloader_num_workers 0 --lazy_preprocess True \
   --seed "$SEED" --data_seed "$SEED" --optim adamw_torch --report_to none --logging_steps 10 \
   --output_dir "$OUT"
-# Note: our trainer additionally forced eager attention (no flash-attn); train_mem.py enables FlashAttention-2 —
-# use llava/train/train.py (or attn_implementation="eager") to match the executed setting.
+# Note: train_mem.py enables FlashAttention-2, which our runs did NOT use. See scripts/train_portable.py.

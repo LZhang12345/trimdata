@@ -11,7 +11,7 @@ that are already complete.
 * **Agent contract for whoever continues this work: [`AGENT_CONTRACT.md`](AGENT_CONTRACT.md)** (machine-readable: [`agent_contract.json`](agent_contract.json)).
 * Code: this repository (`src/` = byte-level snapshot of the executed sources, see `SOURCE_MANIFEST.json` and `PATHS.md`).
 
-If a Hugging Face link does not resolve yet, the upload of that repository is still in progress.
+Both Hugging Face repositories are complete (checksums in each repo's `SHA256SUMS`).
 
 ## Setting
 LLaVA-1.5-7B stage-2 (instruction tuning) with a LoRA fine-tune for **one natural epoch** on a subset of the
@@ -21,9 +21,12 @@ budgets: 5% K=33,032, **10% K=66,076 (anchor)**, 15% K=99,108, 20% K=132,147. Ev
 (28,505 questions) plus an eight-benchmark extended suite.
 
 ## Setup
-* Environment pins of the executed env: `env/requirements-native-env.txt` (Python 3.10, torch/transformers 4.37.2,
-  peft 0.7.1, deepspeed). Install LLaVA from `haotian-liu/LLaVA` at commit `c121f0432da27facab705978f83c4ada465e46fd`
-  and then the pins.
+* Environment pins of the executed env: `env/requirements-native-env.txt` (Python 3.10.19, torch 2.1.2+cu121,
+  transformers 4.37.2, peft 0.7.1, deepspeed 0.12.6, xformers 0.0.23.post1). The `llava/` package at commit
+  `c121f0432da27facab705978f83c4ada465e46fd` is vendored under `src/collaboration/published-foundation-20261022/reference_sources/LLaVA/`;
+  clone `haotian-liu/LLaVA` at that commit as well for its `scripts/` (evaluation helpers).
+* **Train only with `scripts/train_portable.py` and evaluate with `scripts/eval_portable.py`** (see "Executed trainer vs.
+  official LLaVA" below and `AGENT_CONTRACT.md` §3–§4).
 * Data: `llava_v1_5_mix665k.json` and the image folders (COCO train2017, GQA, OCR-VQA, TextVQA train_images, VG
   parts 1/2) from the official LLaVA instructions. Each selection's training `records.json` (LLaVA format, relative image paths such as `coco/train2017/...`) is rebuilt with `scripts/reconstruct_records.py --source llava_v1_5_mix665k.json --selection <dir>` (sha256-checked against `selection_meta.json`).
 * Evaluation data: LLaVA `eval.zip` (c121) and the benchmark images from their official sources (see `docs/EVAL_INPUTS.md`).
@@ -59,14 +62,30 @@ merges it (`merge_and_unload`) — re-evaluating a provided checkpoint is part o
 | Steps | `natural_steps = (K + 3) // 4 // 32` (the last partial accumulation is dropped): 258 @5%, 516 @10%, 774 @15%, 1032 @20% |
 | Sequence | `model_max_length=2048`, `image_aspect_ratio=pad`, `group_by_modality_length=True`, `lazy_preprocess=True` |
 | Precision | `fp16=True`, `bf16=False`, `tf32=False` (NVIDIA L40S), DeepSpeed ZeRO-3 (`zero3.json`), gradient checkpointing |
-| Attention | eager (no FlashAttention / xformers) |
+| Attention | training: LLaVA's xformers patch (`llama_xformers_attn_monkey_patch`) with xformers 0.0.23.post1; the Tool1/Tool3 drivers additionally forced the CUTLASS kernels with deterministic torch/cuBLAS settings. Inference: HF eager. FlashAttention was never used |
 | Seeds | training seed ∈ {17, 29, 43} sets both `seed` and `data_seed`; the selection seed only determines the subset |
 | Data loader | `dataloader_num_workers=0`; images from the official LLaVA-665K image folders (coco, gqa, ocr_vqa, textvqa, vg) |
 
 Exact argument construction: `src/experiments/helper_tool1_baseline_train_v4_20261102/model.py::arguments` (used by
 the v4/v10 drivers) and `src/experiments/root_native_campaign_v7_20261024/config.py` (identical recipe, used for the
-10% Uniform-sel1234 / source-sqrt / COINCIDE runs). `scripts/reference_train_command.sh` restates the same arguments
-for the official LLaVA entry point; it is a reconstruction for convenience, **not** the script we executed.
+10% Uniform-sel1234 / source-sqrt / COINCIDE runs).
+
+### Executed trainer vs. official LLaVA
+Every provided run used the official c121 `llava/train/train.py` **plus three runtime changes** (no LLaVA file was edited):
+1. **Attention:** LLaVA's own xformers patch (as in its `train_xformers.py`); the Tool1/Tool3 drivers also forced the
+   xformers CUTLASS forward/backward kernels with `torch.use_deterministic_algorithms(True)`,
+   `CUBLAS_WORKSPACE_CONFIG=:4096:8`, TF32 off.
+2. **Structured v1 masking** (`src/experiments/root_native_campaign_v7_20261024/structured_preprocess.py`): turn
+   boundaries come from the conversation structure instead of splitting the rendered text, so a message that itself
+   contains a role marker such as "USER:" is masked correctly. Prompts, token ids and truncation are unchanged.
+3. **Optimizer groups** (`.../optimizer_groups.py`): LLaVA's trainer builds four parameter groups, one of which (LoRA
+   without weight decay) is always empty. DeepSpeed 0.12.6 removes empty groups *after* the cosine scheduler has captured
+   four base learning rates, and torch 2.1.2 zips them without a length check, so the projector weights would train at
+   the LoRA rate 2e-4 instead of 2e-5. The empty group is removed before the scheduler is built.
+
+`scripts/train_portable.py` re-applies exactly these changes by importing the executed modules unchanged from `src/`,
+checks the LR ratio during training and the final step count. `scripts/reference_train_command.sh` only lists the
+arguments for reading; **training with it, `train.py` or `train_mem.py` reproduces a different recipe.**
 
 ## Evaluation protocol
 Core four banks (full official banks, 28,505 questions; all greedy: `conv_mode=vicuna_v1`, `temperature=0`,
@@ -80,15 +99,20 @@ Core four banks (full official banks, 28,505 questions; all greedy: `conv_mode=v
 | ScienceQA-IMG | 2,017 (test, image subset) | `scienceqa/llava_test_CQM-A.json` | `model_vqa_science`, `single_pred_prompt=True`, `max_new_tokens=1024` | official `eval_science_qa.py`, image-question accuracy |
 
 Core average = unweighted mean of the four bank scores. Input hashes are in `docs/EVAL_INPUTS.md`.
+To reproduce these settings with the official generation modules use `scripts/eval_portable.py` (keeps the LoRA
+unmerged, forces eager attention and fp16, and selects the LoRA loading branch regardless of the folder name).
 
 Extended suite (scored with the same greedy decoding): MME perception/cognition (official `llava_mme.jsonl`,
-official MME calculation, points of 2000/800), SEED-Bench image (14,233), MMMU val, MMBench-EN dev,
+official MME calculation, points of 2000/800), SEED-Bench image (14,233), MMMU val (official MMMU prompt rendered with the c121 conversation, `banks4.py`), MMBench-EN dev (local labels,
+CircularEval, VLMEvalKit `can_infer` exact-match extraction),
 LLaVA-Bench in-the-wild and MM-Vet (**GPT judge `gpt-4o-2024-08-06`, temperature 0, one run** — a deviation from the
 original judges gpt-4-0314 / gpt-4-0613, so numbers are not comparable with published ones), VizWiz test 8,000 questions
 scored locally against the publicly released answers (not EvalAI test-dev/std; strongly sensitive to the
 "unanswerable" rate and to seed). Extended-suite code: `src/experiments/helper_tool1_bench4_*`, `helper_tool1_bench6_*`,
-`helper_tool1_cells_v7_extsuite_20261110`, `helper_tool1_vizwiz_score_v1_20261101`. Judge code reads the API key from the
-environment; no key is included.
+`helper_tool1_cells_v7_extsuite_20261110`, `helper_tool1_vizwiz_score_v1_20261101`; bank definitions and prompts
+`helper_tool1_bench6_eval_v1_20261103/banks6.py`, `helper_tool1_bench4_eval_v1_20261104/banks4.py`; judge prompts and
+settings `helper_tool1_bench4_judge_v13_20261105/judge4_v13.py`. Judge code reads the API key from the environment or a
+local key file; no key is included.
 
 ## Baseline results (core four; from per-run result files)
 Each row is a mean over the evaluated training seeds; per-run values in `results/baseline_core4_per_run.csv`.
@@ -137,59 +161,22 @@ Extended suite (means as reported in our living results table; not recomputed fo
 | 20% | Uniform (t17) | 1397.5 | 302.1 | 62.31 | 32.67 | 58.16 | 58.90 | 24.40 | 44.81 |
 | 20% | DataTailor (t17) | 1402.2 | 338.9 | 61.93 | 34.00 | 60.97 | 62.10 | 28.00 | 43.93 |
 
-## Coauthor plan (priority order)
-Please follow this order. Use **exactly** the provided selections (rebuilt `records.json`, sha256-verified) and the recipe
-above; one natural epoch; same selected-data budget K; no hyper-parameter tuning of any baseline; report **every** seed
-(including failures); keep the selected-data budget separate from training compute (do not change epochs/steps to
-"match compute"). If any adaptation of an official method is unavoidable, give it a new label and describe it.
+## Coauthor plan
+The authoritative task list, gates, tolerances, schedule for 8× A100 80GB and hand-back format are in
+[`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) (machine-readable: [`agent_contract.json`](agent_contract.json)). Summary:
 
-**0. Hardware calibration (8×A100) — gate for everything else.**
-  a. Re-evaluate two provided checkpoints with the core-four protocol: `uniform/b10/sel1234-t17`
-     (65.23: POPE 84.77, GQA 55.49, TextVQA 52.86, SQA-IMG 67.82) and `datatailor/b10/sel1234-t17`
-     (65.19: see `results/baseline_core4_per_run.csv`). **Tolerance:** core average within ±0.10 and each bank within
-     ±0.30 of the listed values (greedy fp16; small kernel differences are expected). If the official merged-LoRA builder
-     misses this, evaluate with the LoRA unmerged (our setting) before concluding anything.
-  b. Re-train `uniform/b10/sel1234-t17` end-to-end from `selections/uniform/b10/sel1234` (rebuild `records.json`; K=66,076,
-     516 steps) and evaluate it. **Tolerance:** final step == 516 and core average within ±0.30 of 65.23 (our
-     seed-to-seed s.d. at 10% is ≈0.2), no single bank off by more than ±1.0. Prefer one run per GPU with the exact
-     single-GPU setting (per-device 4 × accumulation 32, fp16, eager attention); if memory forces per-device 2 ×
-     accumulation 64, keep global batch 128 and confirm the step count. Proceed only if (a) and (b) pass; otherwise
-     report the deltas and stop.
-
-**1. Evaluate COINCIDE 20%, training seeds 29 and 43** (`coincide/b20/selfixed-t29`, `-t43`; provided): core four +
-   the extended eight. Also run the extended eight for `coincide/b20/selfixed-t17`.
-
-**2. Train + evaluate Uniform 20%, training seed 29** with `selections/uniform/b20/sel1235`
-   (K=132,147, 1032 steps; core four + extended). If capacity allows, also **DataTailor 15%, training seed 17**
-   (`selections/datatailor/b15/sel1234`, K=99,108, 774 steps).
-
-**3. ICONS — faithful reproduction at 10%** (K=66,076), then 5% (K=33,032) and 20% (K=132,147); three training seeds
-   (17/29/43) each. Use the official code and defaults (we pinned commit `b8ce8c86d7b098836a84ec2b40d259195b7f4494`):
-   warm-up on the method's prescribed random fraction, its gradient features and its influence-consensus selection over
-   its specified target tasks. Then train with our recipe. Record the target/validation sets ICONS uses (they are
-   benchmark-aligned) and label any deviation explicitly.
-
-**4. (Optional) Faithful LESS** with the official pipeline (commit `8abf9628b9a814ac3045445eebc8ba3c908fdc78`):
-   LoRA warm-up, Adam-preconditioned projected gradient features (paper defaults), its target-task dev sets; then select
-   K and train with our recipe for 3 seeds. This replaces `less_approx`, which should stay labelled "LESS-approx".
-
-**5. Extended 8-benchmark suite for every baseline checkpoint lacking it:**
-   * 10%: `less_approx/b10/sel1234-t29`, `-t43`; `uniform_scored_random/b10/sel1234-t29`, `-t43` (all eight banks);
-     VizWiz for the Uniform sel1235 / sel1236 and DataTailor 10% seeds that do not yet have it (our table has VizWiz
-     n=1, 2 and 1 respectively — simplest is to score VizWiz for all three seeds of each).
-   * 5%: `uniform/b05/sel1235-t29`, `-t43`; `datatailor/b05/sel1234-t29`, `-t43`; `coincide/b05/selfixed-t29`, `-t43`.
-   * 15%: `uniform/b15/sel1235-t29`, `-t43`; `datatailor/b15/sel1234-t29` (+ t17 after step 2).
-   * 20%: `uniform/b20/sel1235-t43` (+ t29 after step 2); `datatailor/b20/sel1234-t29`, `-t43`; `coincide/b20/selfixed-t17`, `-t29`, `-t43`.
-   * New ICONS / LESS runs from steps 3–4.
-
-**6. (Optional) Source-sqrt and LESS at 5% / 20%** (K=33,032 / 132,147; 3 training seeds) using the provided selector
-   code (`src/experiments/root_native_campaign_v7_20261024/selection.py`, method `source_sqrt`, selection seed 1234,
-   on the pool in `pool/pool_record_ids.json`).
-
-**Return format:** one CSV row per (method, budget, selection seed, training seed) following
-`results/RESULTS_TEMPLATE.csv` (core four with the GQA main score as defined above, core average, the extended eight,
-step counts, GPU type/count and GPU-hours for selection, training, evaluation and failed attempts, checkpoint and
-selection sha256). Please also upload the new adapters/selections in the same layout.
+| ID | Task |
+|---|---|
+| T0 | Calibration: T0a re-evaluate `uniform/b10/sel1234-t17` and `datatailor/b10/sel1234-t17` (core four); T0c extended eight on `uniform/b10/sel1234-t17`; T0b retrain `uniform/b10/sel1235-t17` |
+| T1 | Evaluate COINCIDE 20% t29/t43 (core + extended); extended for t17 |
+| T2 | Train + evaluate Uniform 20% t29 |
+| T3 | Train + evaluate DataTailor 15% t17 |
+| T4 | Faithful ICONS: 10% × 3 seeds, then 5% and 20% |
+| T5 | Extended eight for the 24 provided checkpoints that lack it (listed in the contract) and all new checkpoints |
+| T9 | Faithful XMAS, 10% × 3 seeds |
+| T10 | Faithful CoIDO, 10% × 3 seeds |
+| T8 | Full-data reference (660,763 records, 5,162 steps, seed 17) |
+| T6, T7, T11 (optional) | Faithful LESS 10%; source-sqrt 5%/20%; PreSel-adapted (approval first) |
 
 ## Checkpoint index
 Every folder has `provenance.json` (source run, file sha256, steps, K, selection reference, core-four scores and the
@@ -276,12 +263,14 @@ revision `9d451dc7629cfe0469f6ae4432b765cd603d5fcb`, sha256 `ce959ce6e23073ee1cd
 * **Uniform 20% training seed 29** — only a partial attempt (387/1032 steps) exists; not uploaded.
 * **DataTailor 15% training seed 17** — only a partial attempt (215/774 steps) exists; not uploaded.
 * **COINCIDE 20% training seeds 29 and 43** — trained (1032/1032 steps, uploaded) but **not evaluated**.
-* **ICONS** — no faithful run exists (only a warm-up state); not uploaded.
+* **ICONS, XMAS, CoIDO, PreSel** — no faithful run exists (ICONS has only a warm-up state); contract tasks T4, T9,
+  T10 and optional T11.
 * **Faithful LESS** — not run. `less_approx` uses count-sketch **SGD** gradient features (the LESS paper uses
   Adam-preconditioned features), a 3×Uniform candidate pre-filter and two benchmark-aligned dev targets (GQA-val,
   ScienceQA-val). It is therefore *not* LESS and is also not task-blind. Its set is shifted to short / yes-no answers
   and the models show a strong "yes" bias on POPE/MME.
-* **Full-data (100%) reference** — no complete run exists.
+* **Full-data (100%) reference** — no complete run exists (a partial run reached 2,675 / 5,162 steps on our cluster
+  and is not released); contract task T8.
 * **Historical allocation arms ("A-P", "A-M")** appearing in our internal tables are project-internal allocation
   variants, not published baselines; they are omitted here.
 * **Source-sqrt** exists only at 10% (selection seed 1234). The 5%/15%/20% Uniform cells use selection seed 1235 with K
@@ -291,7 +280,7 @@ revision `9d451dc7629cfe0469f6ae4432b765cd603d5fcb`, sha256 `ce959ce6e23073ee1cd
   66,076 / 33,038 / 132,152 at 10/5/20%. The selection is deterministic (no selection seed).
 * **DataTailor** uses the official code (commit `d6fa5eb6bc2920a561c614abb6b841a128affb92`); its realised K at 10% is
   66,071 (five fewer than the nominal 66,076).
-* Extended-suite coverage is incomplete (see the coauthor plan, step 5). The 10% evaluation banks were used repeatedly
+* Extended-suite coverage is incomplete (24 provided checkpoints; exact list in `AGENT_CONTRACT.md`, task T5). The 10% evaluation banks were used repeatedly
   during development; they are not a fresh held-out confirmation for anything.
 * Timing and GPU-hour accounting for the provided runs are not part of this release; please record your own (see the results template).
 

@@ -1,6 +1,16 @@
 {
- "schema": "trimdata-agent-contract-v1",
+ "schema": "trimdata-agent-contract-v2",
  "contract_doc": "AGENT_CONTRACT.md",
+ "precedence": [
+  "AGENT_CONTRACT.md",
+  "README.md",
+  "AGENTS.md"
+ ],
+ "hardware": {
+  "gpus": 8,
+  "type": "NVIDIA A100 80GB",
+  "provided_runs_hardware": "1x NVIDIA L40S per run"
+ },
  "inputs": {
   "code": "this repository src/ (SOURCE_MANIFEST.json)",
   "checkpoints_hf_model_repo": "submissionpaper1234/trimdata-baseline-checkpoints",
@@ -15,97 +25,260 @@
   "reference_scores": [
    "results/baseline_core4_per_run.csv",
    "results/baseline_extended_reported.csv"
-  ]
+  ],
+  "base_models": {
+   "lmsys/vicuna-7b-v1.5": "3321f76e3f527bd14065daf69dad9344000a201d",
+   "openai/clip-vit-large-patch14-336": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+   "liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-7b-v1.5": "5414da88308e4287a29f2e9609256458afb0a981"
+  },
+  "training_data": {
+   "repo": "liuhaotian/LLaVA-Instruct-150K",
+   "revision": "9d451dc7629cfe0469f6ae4432b765cd603d5fcb",
+   "file": "llava_v1_5_mix665k.json",
+   "sha256": "ce959ce6e23073ee1cd1a8a2ef1c633768c10d4174327b8b2dc7113b91af6cf8"
+  },
+  "environment": "env/requirements-native-env.txt (torch 2.1.2+cu121, transformers 4.37.2, peft 0.7.1, deepspeed 0.12.6, xformers 0.0.23.post1)",
+  "official_code_pins": {
+   "llava": {
+    "repo": "haotian-liu/LLaVA",
+    "commit": "c121f0432da27facab705978f83c4ada465e46fd"
+   },
+   "icons": {
+    "repo": "princetonvisualai/icons",
+    "commit": "b8ce8c86d7b098836a84ec2b40d259195b7f4494"
+   },
+   "less": {
+    "repo": "princeton-nlp/LESS",
+    "commit": "8abf9628b9a814ac3045445eebc8ba3c908fdc78"
+   },
+   "xmas": {
+    "repo": "BigML-CS-UCLA/XMAS",
+    "commit": "e534dd99e9ce9b7be345bd55e055c9b4e5c91c90",
+    "parent": "NilayN7/XMAS@4fda84bfc7acf387c092dc93d0d15b299fe197d8",
+    "license": "MIT"
+   },
+   "coido": {
+    "repo": "SuDIS-ZJU/CoIDO",
+    "commit": "a91906703267741e73532b5b560593d899ffa252",
+    "license": "AGPL-3.0"
+   },
+   "presel": {
+    "repo": "bardisafa/PreSel",
+    "commit": "2dd6709de1fa5d687f88e55377118a38716144ca",
+    "license": "MIT"
+   },
+   "datatailor_provided": {
+    "repo": "Yuqifan1117/DataTailor",
+    "commit": "d6fa5eb6bc2920a561c614abb6b841a128affb92"
+   }
+  },
+  "hf_revisions": {
+   "submissionpaper1234/trimdata-baseline-checkpoints": "ec9d98a2b071f2873889ad7f6e6dc66a02c481e6",
+   "submissionpaper1234/trimdata-baseline-selections": "3074f2b1ca0aa15b4ac0dbced03afd637d84cc75"
+  }
  },
  "invariants": {
-  "global_batch": 128,
-  "epochs": 1,
-  "natural_steps": "(K+3)//4//32",
-  "lora": {
-   "r": 128,
-   "alpha": 256,
-   "dropout": 0.05,
-   "lr": 0.0002
-  },
-  "mm_projector_lr": 2e-05,
-  "schedule": "cosine",
-  "warmup_ratio": 0.03,
-  "weight_decay": 0,
-  "model_max_length": 2048,
-  "precision": "fp16",
-  "attention": "eager",
-  "deepspeed": "zero3",
-  "training_seeds": [
-   17,
-   29,
-   43
+  "train_entry_point": "scripts/train_portable.py (only)",
+  "train_runtime_changes_vs_official": [
+   "xformers attention patch with CUTLASS kernels + deterministic torch/cuBLAS",
+   "structured v1 label masking (src/experiments/root_native_campaign_v7_20261024/structured_preprocess.py)",
+   "empty LoRA-bias optimizer group removed before the LR scheduler (optimizer_groups.py); otherwise projector trains at 2e-4 instead of 2e-5"
   ],
-  "budgets": {
+  "recipe": {
+   "lora_r": 128,
+   "lora_alpha": 256,
+   "lora_dropout": 0.05,
+   "lr": 0.0002,
+   "mm_projector_lr": 2e-05,
+   "optim": "adamw_torch",
+   "weight_decay": 0,
+   "scheduler": "cosine",
+   "warmup_ratio": 0.03,
+   "global_batch": 128,
+   "per_device_batch": 4,
+   "grad_accum": 32,
+   "model_max_length": 2048,
+   "image_aspect_ratio": "pad",
+   "group_by_modality_length": true,
+   "precision": "fp16",
+   "deepspeed": "scripts/zero3.json",
+   "gradient_checkpointing": true,
+   "dataloader_num_workers": 0,
+   "conv_template": "v1",
+   "training_seeds": [
+    17,
+    29,
+    43
+   ]
+  },
+  "gpu_layout": "one single-GPU run per GPU; multi-GPU only for T8 with per_device*accum*world == 128",
+  "natural_steps": {
+   "b05": 258,
+   "b10": 516,
+   "b15": 774,
+   "b20": 1032,
+   "full": 5162
+  },
+  "K": {
    "b05": 33032,
    "b10": 66076,
    "b15": 99108,
-   "b20": 132147
+   "b20": 132147,
+   "full": 660763,
+   "realised_exceptions": {
+    "datatailor/b10": 66071,
+    "coincide/b05": 33038,
+    "coincide/b20": 132152
+   }
   },
-  "core_banks": {
-   "POPE": 8910,
-   "GQA_testdev_balanced": 12578,
-   "TextVQA_val": 5000,
-   "ScienceQA_IMG": 2017
+  "eval_entry_point": "scripts/eval_portable.py <official llava.eval module> (LoRA unmerged, eager, fp16, greedy, batch 1, conv vicuna_v1)",
+  "core4": {
+   "POPE": {
+    "n": 8910,
+    "metric": "pooled accuracy"
+   },
+   "GQA": {
+    "n": 12578,
+    "metric": "native normalized score after convert_gqa_for_eval"
+   },
+   "TextVQA": {
+    "n": 5000,
+    "metric": "m4c accuracy"
+   },
+   "SQA_img": {
+    "n": 2017,
+    "metric": "image-subset accuracy"
+   },
+   "avg": "unweighted mean"
   },
-  "gqa_main_score": "native normalized score after convert_gqa_for_eval (not unconverted)",
-  "decoding": "greedy, temperature 0, num_beams 1, fp16, batch 1, LoRA unmerged",
-  "extended": [
-   "MME_P",
-   "MME_C",
-   "SEED_img",
-   "MMMU",
-   "MMBench",
-   "LLaVA_W",
-   "MM_Vet",
-   "VizWiz"
-  ],
-  "judge": "gpt-4o-2024-08-06, temperature 0, one run",
-  "no_baseline_tuning": true,
-  "no_eval_label_leakage": true,
-  "report_all_seeds_and_failures": true
+  "extended8": {
+   "MME_P": "/2000",
+   "MME_C": "/800",
+   "SEED_img": "14,233 image subset",
+   "MMMU": "val 900, banks4.py prompt",
+   "MMBench": "EN dev, local CircularEval, VLMEvalKit can_infer exact",
+   "LLaVA_W": "judge gpt-4o-2024-08-06 T=0 one run",
+   "MM_Vet": "judge gpt-4o-2024-08-06 T=0 one run",
+   "VizWiz": "test 8000, local scorer, report unanswerable share",
+   "judge_prompts": "src/experiments/helper_tool1_bench4_judge_v13_20261105/judge4_v13.py",
+   "bank_definitions": [
+    "src/experiments/helper_tool1_bench4_eval_v1_20261104/banks4.py",
+    "src/experiments/helper_tool1_bench6_eval_v1_20261103/banks6.py"
+   ]
+  },
+  "fidelity": "official code at pinned commit, published defaults, no tuning; release bug fixes only if they restore stated behaviour and are disclosed; adaptations get a new label",
+  "no_leakage": true,
+  "report_every_attempt": true
  },
  "gate": {
-  "id": "T0",
   "T0a": {
-   "reevaluate": [
-    "uniform/b10/sel1234-t17",
-    "datatailor/b10/sel1234-t17"
-   ],
+   "reevaluate": {
+    "uniform/b10/sel1234-t17": {
+     "POPE": 84.77,
+     "GQA": 55.49,
+     "TextVQA": 52.86,
+     "SQA_img": 67.82,
+     "avg": 65.23
+    },
+    "datatailor/b10/sel1234-t17": {
+     "POPE": 83.08,
+     "GQA": 57.52,
+     "TextVQA": 53.65,
+     "SQA_img": 66.53,
+     "avg": 65.19
+    }
+   },
    "tolerance": {
     "core_avg": 0.1,
     "per_bank": 0.3
    },
-   "reference_uniform": {
-    "avg": 65.23,
-    "POPE": 84.77,
-    "GQA": 55.49,
-    "TextVQA": 52.86,
-    "SQA_img": 67.82
+   "also_report": "answer agreement with provided PREDICTIONS.jsonl",
+   "on_fail": "also try --merged, report both, stop"
+  },
+  "T0c": {
+   "reevaluate_extended": "uniform/b10/sel1234-t17",
+   "reference": {
+    "MME_P": 1360.2,
+    "MME_C": 311.8,
+    "SEED_img": 59.87,
+    "MMMU": 32.78,
+    "MMBench": 58.76,
+    "LLaVA_W": 56.5,
+    "MM_Vet": 26.6,
+    "VizWiz": 43.43
+   },
+   "tolerance": {
+    "MME_P": 15,
+    "MME_C": 10,
+    "SEED_img": 0.5,
+    "MMMU": 0.5,
+    "MMBench": 0.5,
+    "VizWiz": 1.0,
+    "LLaVA_W": 2.0,
+    "MM_Vet": 2.0
    }
   },
   "T0b": {
-   "retrain": "uniform/b10/sel1234-t17",
-   "selection": "selections/uniform/b10/sel1234",
+   "retrain": "uniform/b10/sel1235-t17",
+   "selection": "selections/uniform/b10/sel1235",
    "K": 66076,
+   "seed": 17,
    "steps": 516,
-   "tolerance": {
-    "core_avg": 0.3,
-    "per_bank": 1.0
+   "early_check": {
+    "lr_at_step_10": 0.000125,
+    "lr_group_check": "steps 1/10/100 (automatic)",
+    "loss_reference": {
+     "10": 1.0961,
+     "20": 1.01,
+     "30": 0.8531,
+     "40": 0.8942,
+     "50": 0.8452,
+     "60": 0.9459
+    },
+    "loss_tolerance": 0.03,
+    "abort_after_consecutive_deviations": 2
    },
-   "reference_avg": 65.23
+   "final": {
+    "reference": {
+     "POPE": 84.56,
+     "GQA": 55.45,
+     "TextVQA": 53.77,
+     "SQA_img": 67.08,
+     "avg": 65.22
+    },
+    "tolerance": {
+     "core_avg": 0.3,
+     "per_bank": 1.0
+    }
+   }
   },
-  "on_fail": "stop and report"
+  "unlocks": {
+   "T0a": [
+    "T1 (core)",
+    "evaluation parts of other tasks"
+   ],
+   "T0c": [
+    "extended parts of T1/T5 and new rows"
+   ],
+   "T0b": [
+    "all training tasks"
+   ]
+  },
+  "on_fail": "stop dependent tasks; write CALIBRATION_REPORT.md"
  },
  "tasks": [
   {
+   "id": "T0",
+   "required": true,
+   "action": "calibrate",
+   "gpu_h": "~25"
+  },
+  {
    "id": "T1",
+   "required": true,
    "depends_on": [
-    "T0"
+    "T0a",
+    "T0c"
    ],
    "action": "evaluate",
    "cells": [
@@ -116,133 +289,296 @@
     "core4",
     "extended8"
    ],
-   "also": "extended8 for coincide/b20/selfixed-t17"
+   "also": "extended8 for coincide/b20/selfixed-t17",
+   "gpu_h": "~15"
   },
   {
    "id": "T2",
+   "required": true,
    "depends_on": [
-    "T0"
+    "T0b"
    ],
    "action": "train+evaluate",
-   "method": "uniform",
-   "budget": "b20",
-   "K": 132147,
+   "cell": "uniform/b20/sel1235-t29",
    "selection": "selections/uniform/b20/sel1235",
-   "training_seeds": [
-    29
-   ],
-   "steps": 1032
+   "K": 132147,
+   "steps": 1032,
+   "gpu_h": "~25"
   },
   {
    "id": "T3",
+   "required": true,
    "depends_on": [
-    "T0"
+    "T0b"
    ],
    "action": "train+evaluate",
-   "method": "datatailor",
-   "budget": "b15",
-   "K": 99108,
+   "cell": "datatailor/b15/sel1234-t17",
    "selection": "selections/datatailor/b15/sel1234",
-   "training_seeds": [
-    17
-   ],
-   "steps": 774
+   "K": 99108,
+   "steps": 774,
+   "gpu_h": "~20"
   },
   {
    "id": "T4",
-   "depends_on": [
-    "T0"
-   ],
+   "required": true,
+   "depends_on": {
+    "selection": [],
+    "students": [
+     "T0b"
+    ]
+   },
    "action": "select+train+evaluate",
    "method": "ICONS (faithful)",
-   "official_commit": "b8ce8c86d7b098836a84ec2b40d259195b7f4494",
-   "budgets": [
-    "b10",
-    "b05",
-    "b20"
-   ],
-   "order": "b10 first",
-   "training_seeds": [
-    17,
-    29,
-    43
-   ],
-   "extra_deliverable": "ICONS_FIDELITY.md"
+   "pin": {
+    "repo": "princetonvisualai/icons",
+    "commit": "b8ce8c86d7b098836a84ec2b40d259195b7f4494"
+   },
+   "budgets_seeds": {
+    "b10": [
+     17,
+     29,
+     43
+    ],
+    "then": {
+     "b05": [
+      17,
+      29,
+      43
+     ],
+     "b20": [
+      17,
+      29,
+      43
+     ]
+    }
+   },
+   "fidelity_note": "ICONS_FIDELITY.md",
+   "gpu_h": "~150-250"
   },
   {
    "id": "T5",
+   "required": true,
    "depends_on": [
-    "T0"
+    "T0a",
+    "T0c"
    ],
-   "action": "evaluate",
-   "suites": [
-    "extended8"
+   "action": "evaluate extended8",
+   "cells_missing_all8": [
+    "coincide/b05/selfixed-t29",
+    "coincide/b05/selfixed-t43",
+    "coincide/b20/selfixed-t17",
+    "coincide/b20/selfixed-t29",
+    "coincide/b20/selfixed-t43",
+    "datatailor/b05/sel1234-t29",
+    "datatailor/b05/sel1234-t43",
+    "datatailor/b15/sel1234-t29",
+    "datatailor/b20/sel1234-t29",
+    "datatailor/b20/sel1234-t43",
+    "less_approx/b10/sel1234-t29",
+    "less_approx/b10/sel1234-t43",
+    "uniform/b05/sel1235-t29",
+    "uniform/b05/sel1235-t43",
+    "uniform/b15/sel1235-t29",
+    "uniform/b15/sel1235-t43",
+    "uniform/b20/sel1235-t43",
+    "uniform_scored_random/b10/sel1234-t29",
+    "uniform_scored_random/b10/sel1234-t43"
    ],
-   "cells": "every provided checkpoint lacking extended scores (README Coauthor plan step 5) + all new T2-T4 checkpoints"
+   "cells_missing_vizwiz_only": [
+    "datatailor/b10/sel1234-t29",
+    "datatailor/b10/sel1234-t43",
+    "uniform/b10/sel1235-t29",
+    "uniform/b10/sel1235-t43",
+    "uniform/b10/sel1236-t43"
+   ],
+   "plus": "every new checkpoint from T2-T4, T8-T10",
+   "gpu_h": "~3 per checkpoint"
+  },
+  {
+   "id": "T9",
+   "required": true,
+   "depends_on": {
+    "selection": [],
+    "students": [
+     "T0b"
+    ]
+   },
+   "action": "select+train+evaluate",
+   "method": "XMAS (faithful)",
+   "pin": {
+    "repo": "BigML-CS-UCLA/XMAS",
+    "commit": "e534dd99e9ce9b7be345bd55e055c9b4e5c91c90",
+    "parent": "NilayN7/XMAS@4fda84bfc7acf387c092dc93d0d15b299fe197d8",
+    "license": "MIT"
+   },
+   "budgets_seeds": {
+    "b10": [
+     17,
+     29,
+     43
+    ]
+   },
+   "release_fixes_to_disclose": [
+    "cluster_and_sample.sh BUDGET vs PERCENTAGE argument",
+    "stability-path random.sample ignores CLI seed",
+    "clustering silently skips checkpoints with unloadable metrics"
+   ],
+   "fidelity_note": "XMAS_FIDELITY.md",
+   "gpu_h": "~120-200"
+  },
+  {
+   "id": "T10",
+   "required": true,
+   "depends_on": {
+    "selection": [],
+    "students": [
+     "T0b"
+    ]
+   },
+   "action": "select+train+evaluate",
+   "method": "CoIDO (faithful; label CoIDO-release if the release differs from the paper)",
+   "pin": {
+    "repo": "SuDIS-ZJU/CoIDO",
+    "commit": "a91906703267741e73532b5b560593d899ffa252",
+    "license": "AGPL-3.0"
+   },
+   "budgets_seeds": {
+    "b10": [
+     17,
+     29,
+     43
+    ]
+   },
+   "notes": [
+    "record LLM judge model/version/cost",
+    "README says release omits the paper's similarity filtering",
+    "AGPL-3.0: keep code separate"
+   ],
+   "fidelity_note": "COIDO_FIDELITY.md",
+   "gpu_h": "~100-150 + API"
+  },
+  {
+   "id": "T8",
+   "required": true,
+   "depends_on": [
+    "T0b"
+   ],
+   "action": "train+evaluate",
+   "cell": "full/b100/selfixed-t17",
+   "selection": "pool/pool_record_ids.json (all 660,763)",
+   "steps": 5162,
+   "multi_gpu_allowed": true,
+   "gpu_h": "~80-120"
   },
   {
    "id": "T6",
-   "optional": true,
-   "depends_on": [
-    "T0"
-   ],
+   "required": false,
+   "depends_on": {
+    "students": [
+     "T0b"
+    ]
+   },
    "action": "select+train+evaluate",
    "method": "LESS (faithful)",
-   "official_commit": "8abf9628b9a814ac3045445eebc8ba3c908fdc78",
-   "budgets": [
-    "b10"
-   ],
-   "training_seeds": [
-    17,
-    29,
-    43
-   ],
-   "extra_deliverable": "LESS_FIDELITY.md"
+   "pin": {
+    "repo": "princeton-nlp/LESS",
+    "commit": "8abf9628b9a814ac3045445eebc8ba3c908fdc78"
+   },
+   "budgets_seeds": {
+    "b10": [
+     17,
+     29,
+     43
+    ]
+   },
+   "fidelity_note": "LESS_FIDELITY.md",
+   "gpu_h": "~100"
   },
   {
    "id": "T7",
-   "optional": true,
+   "required": false,
    "depends_on": [
-    "T0"
+    "T0b"
    ],
    "action": "select+train+evaluate",
    "method": "source_sqrt",
    "selector": "src/experiments/root_native_campaign_v7_20261024/selection.py",
    "selection_seed": 1234,
-   "budgets": [
-    "b05",
-    "b20"
+   "budgets_seeds": {
+    "b05": [
+     17,
+     29,
+     43
+    ],
+    "b20": [
+     17,
+     29,
+     43
+    ]
+   },
+   "gpu_h": "~90"
+  },
+  {
+   "id": "T11",
+   "required": false,
+   "depends_on": [
+    "lead approval of adaptation plan",
+    "T0b"
    ],
-   "training_seeds": [
-    17,
-    29,
-    43
-   ]
+   "action": "plan, then select+train+evaluate",
+   "method": "PreSel-adapted",
+   "pin": {
+    "repo": "bardisafa/PreSel",
+    "commit": "2dd6709de1fa5d687f88e55377118a38716144ca",
+    "license": "MIT"
+   },
+   "budgets_seeds": {
+    "b10": [
+     17,
+     29,
+     43
+    ]
+   },
+   "fidelity_note": "PRESEL_FIDELITY.md",
+   "gpu_h": "~100"
   }
  ],
+ "priority_order": [
+  "T0",
+  "T1",
+  "T5",
+  "T2",
+  "T3",
+  "T4",
+  "T9",
+  "T10",
+  "T8",
+  "T6",
+  "T7",
+  "T11"
+ ],
+ "after_new_baselines_10pct": "report and ask the lead which 1-2 of ICONS/XMAS/CoIDO get 5%/20% runs",
  "outputs": {
   "results_csv": "results/coauthor/RESULTS.csv (columns of results/RESULTS_TEMPLATE.csv; one row per cell + one per failed attempt)",
   "run_log": "results/coauthor/RUN_LOG.md",
   "calibration": "results/coauthor/CALIBRATION_REPORT.md",
-  "checkpoints": "own HF repo, layout <method>/<bNN>/<selXXXX|selfixed>-t<seed>/ + provenance.json + core-4 prediction files",
+  "checkpoints": "own HF repo, layout <method>/<bNN>/<selXXXX|selfixed>-t<seed>/ with adapter, projector, configs, trainer_state.json, PORTABLE_RUN_SUMMARY.json, provenance.json, eval/ raw predictions",
   "selections": "record_ids.json + selection_meta.json in dataset-repo layout",
-  "handback": "pull request to LZhang12345/trimdata (no weights in Git)"
+  "handback": "pull request to LZhang12345/trimdata (no weights in Git)",
+  "fidelity_notes": "<METHOD>_FIDELITY.md for ICONS, XMAS, CoIDO, LESS, PreSel"
  },
  "stop_and_ask": [
-  "T0 fails",
-  "input hash mismatch",
-  "official code needs a changed selection unit/features/defaults",
-  "different global batch or step count needed",
-  "implausible result before correctness checks",
-  "adding or dropping any cell"
+  "any gate fails or input hash mismatch",
+  "official method cannot run without changing unit/features/defaults/targets, or release contradicts paper",
+  "different global batch, steps or GPU layout needed",
+  "implausible result (core avg < 60 at 10%, > 2 points from comparable baselines, POPE yes-ratio > 0.55)",
+  "adding/dropping any cell, budget or benchmark; task cost > 2x estimate"
  ],
  "prohibited": [
-  "baseline hyper-parameter search",
-  "changing K/epochs/steps/decoding/scorers",
-  "eval-label leakage",
-  "best-seed-only reporting",
-  "overwriting provided artifacts",
-  "committing credentials",
-  "re-hosting LLaVA-665K text or images"
+  "hyper-parameter search on baselines; changing K, epochs, steps, decoding, scorers or judge settings",
+  "using benchmark answers for selection or tuning; reporting only the best seed",
+  "overwriting provided checkpoints/selections; editing executed sources in src/",
+  "training with plain llava/train/train.py, train_mem.py or scripts/reference_train_command.sh",
+  "committing tokens/API keys; re-hosting LLaVA-665K text or images"
  ]
 }
