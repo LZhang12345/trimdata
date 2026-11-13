@@ -162,8 +162,11 @@ Extended suite (means as reported in our living results table; not recomputed fo
 | 20% | DataTailor (t17) | 1402.2 | 338.9 | 61.93 | 34.00 | 60.97 | 62.10 | 28.00 | 43.93 |
 
 ## Coauthor plan
-The authoritative task list, gates, tolerances, schedule for 8× A100 80GB and hand-back format are in
+The authoritative task list, gates, tolerances, schedule for 8× A100 40GB and hand-back format are in
 [`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) (machine-readable: [`agent_contract.json`](agent_contract.json)). Summary:
+
+Project-lead update, 2026-11-12: defer LLaVA-W and MM-Vet judge experiments while continuing core-four
+and locally scored extended work. Deferred metrics remain blank.
 
 | ID | Task |
 |---|---|
@@ -173,6 +176,7 @@ The authoritative task list, gates, tolerances, schedule for 8× A100 80GB and h
 | T3 | Train + evaluate DataTailor 15% t17 |
 | T4 | Faithful ICONS: 10% × 3 seeds, then 5% and 20% |
 | T5 | Extended eight for the 24 provided checkpoints that lack it (listed in the contract) and all new checkpoints |
+| T12 | Faithful VisNec (required; closest prior art to our visual-necessity filter), 10% × 3 seeds |
 | T9 | Faithful XMAS, 10% × 3 seeds |
 | T10 | Faithful CoIDO, 10% × 3 seeds |
 | T8 | Full-data reference (660,763 records, 5,162 steps, seed 17) |
@@ -263,7 +267,7 @@ revision `9d451dc7629cfe0469f6ae4432b765cd603d5fcb`, sha256 `ce959ce6e23073ee1cd
 * **Uniform 20% training seed 29** — only a partial attempt (387/1032 steps) exists; not uploaded.
 * **DataTailor 15% training seed 17** — only a partial attempt (215/774 steps) exists; not uploaded.
 * **COINCIDE 20% training seeds 29 and 43** — trained (1032/1032 steps, uploaded) but **not evaluated**.
-* **ICONS, XMAS, CoIDO, PreSel** — no faithful run exists (ICONS has only a warm-up state); contract tasks T4, T9,
+* **ICONS, VisNec, XMAS, CoIDO, PreSel** — no faithful run exists (ICONS has only a warm-up state); contract tasks T4, T9,
   T10 and optional T11.
 * **Faithful LESS** — not run. `less_approx` uses count-sketch **SGD** gradient features (the LESS paper uses
   Adam-preconditioned features), a 3×Uniform candidate pre-filter and two benchmark-aligned dev targets (GQA-val,

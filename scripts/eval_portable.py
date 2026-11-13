@@ -29,6 +29,25 @@ VENDORED_LLAVA = (REPO / "src/collaboration/published-foundation-20261022/refere
 LORA_NAME = "llava-v1.5-7b-lora"
 
 
+def install_eager_config_loader(config_class):
+    """Make eager explicit before Transformers 4.37.2 dispatches attention.
+
+    The builder passes an existing config to from_pretrained. In 4.37.2 its
+    default getter returns "eager" while the internal value is None; an eager
+    keyword equal to that getter is ignored and automatic dispatch picks SDPA.
+    Set the config's implementation explicitly when the builder loads it.
+    """
+    original = config_class.from_pretrained.__func__
+
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs):
+        config = original(cls, *args, **kwargs)
+        config._attn_implementation = "eager"
+        return config
+
+    config_class.from_pretrained = from_pretrained
+
+
 def main():
     argv = sys.argv[1:]
     merged = False
@@ -49,6 +68,9 @@ def main():
     import peft
     import torch
     import llava.model.builder as builder
+    from llava.model.language_model.llava_llama import LlavaConfig
+
+    install_eager_config_loader(LlavaConfig)
 
     if torch.cuda.device_count() != 1:
         sys.exit("eval_portable: expose exactly one GPU (e.g. CUDA_VISIBLE_DEVICES=3); found %d"
@@ -67,13 +89,21 @@ def main():
         kwargs.setdefault("attn_implementation", "eager")
         tokenizer, model, image_processor, context_len = original(model_path, model_base, model_name, *args, **kwargs)
         model = model.to(device="cuda", dtype=torch.float16).eval()
+        from transformers.models.llama.modeling_llama import LlamaAttention
+        attention_layers = [layer.self_attn for layer in model.get_model().layers]
+        if (model.config._attn_implementation != "eager"
+                or not attention_layers or any(type(layer) is not LlamaAttention for layer in attention_layers)):
+            raise RuntimeError(
+                "expected instantiated eager LlamaAttention layers; config=%s, classes=%s"
+                % (model.config._attn_implementation, sorted({type(layer).__name__ for layer in attention_layers})))
         if model_base is not None:
             from peft.tuners.lora import LoraLayer
             layers = [m for m in model.modules() if isinstance(m, LoraLayer)]
             if not merged and (not layers or any(m.merged for m in layers)):
                 raise RuntimeError("expected active, unmerged LoRA layers; found %d layers" % len(layers))
-            print("eval_portable: %s LoRA (%d LoRA layers), attention=%s, dtype=fp16"
-                  % ("merged" if merged else "unmerged", len(layers), model.config._attn_implementation), flush=True)
+            print("eval_portable: %s LoRA (%d LoRA layers), attention=%s (%d LlamaAttention layers), dtype=fp16"
+                  % ("merged" if merged else "unmerged", len(layers), model.config._attn_implementation,
+                     len(attention_layers)), flush=True)
         return tokenizer, model, image_processor, context_len
 
     builder.load_pretrained_model = load_pretrained_model

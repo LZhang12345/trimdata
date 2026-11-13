@@ -1,4 +1,4 @@
-# Agent contract — baseline completion for `trimdata` (8× NVIDIA A100 80GB)
+# Agent contract — baseline completion for `trimdata` (8× NVIDIA A100 40GB)
 
 This file is the **binding work order** for any agent (human or AI) that takes over the baseline side of this study.
 Read it fully before acting. Precedence: **this contract > `README.md` > `AGENTS.md`**. If it conflicts with an
@@ -10,8 +10,14 @@ explicit instruction from the project lead, ask the lead. Machine-readable copy:
 * **You do not own:** the project's own selection method (not in this repository), the paper, or any change to the
   fixed protocol in §3. Do not add or drop baselines, budgets, seeds, benchmarks or hyper-parameter variants without
   written approval from the project lead.
-* **Hardware:** 8× NVIDIA A100 80GB on one machine. All provided runs were made on single NVIDIA L40S GPUs; the gates
+* **Hardware:** 8× NVIDIA A100 40GB on one machine (corrected by the project lead on 2026-11-12). Continue with the
+  fixed recipe unless 40GB memory becomes a demonstrated blocker. All provided runs were made on single NVIDIA L40S GPUs; the gates
   in §5 establish that your hardware reproduces them before any new result is produced.
+* **Temporary judge deferral, project lead 2026-11-12:** defer LLaVA-W and MM-Vet generation/judging.
+  Continue T0a/T0b and the six locally scored extended metrics. T0c remains incomplete overall;
+  its local metrics can be calibrated independently. Core-only evaluation tasks require T0a,
+  and locally scored extended tasks additionally require their local T0c calibration.
+  Do not assign scores to deferred metrics or omit a selector's prescribed quality judge.
 
 ## 2. Inputs (read-only; verify every hash before use)
 | Input | Location / identity | Verification |
@@ -25,7 +31,7 @@ explicit instruction from the project lead, ask the lead. Machine-readable copy:
 | Environment | `env/requirements-native-env.txt` (Python 3.10.19, torch 2.1.2+cu121, transformers 4.37.2, peft 0.7.1, deepspeed 0.12.6, **xformers 0.0.23.post1**) | `pip freeze` diff in `CALIBRATION_REPORT.md` |
 | Evaluation inputs | LLaVA `eval.zip` (c121 instructions) + official benchmark images; hashes in `docs/EVAL_INPUTS.md` | hashes |
 | Reference scores | `results/baseline_core4_per_run.csv`, `results/baseline_extended_reported.csv`, per-run `eval/**/SCORE*.json` and `PREDICTIONS.jsonl` on the HF model repo | — |
-| Official baseline code (pins) | ICONS `princetonvisualai/icons` @ `b8ce8c86d7b098836a84ec2b40d259195b7f4494`; LESS `princeton-nlp/LESS` @ `8abf9628b9a814ac3045445eebc8ba3c908fdc78`; XMAS `BigML-CS-UCLA/XMAS` @ `e534dd99e9ce9b7be345bd55e055c9b4e5c91c90` (fork of `NilayN7/XMAS` @ `4fda84bfc7acf387c092dc93d0d15b299fe197d8`; MIT); CoIDO `SuDIS-ZJU/CoIDO` @ `a91906703267741e73532b5b560593d899ffa252` (AGPL-3.0); PreSel `bardisafa/PreSel` @ `2dd6709de1fa5d687f88e55377118a38716144ca` (MIT) | record the commit you actually ran |
+| Official baseline code (pins) | ICONS `princetonvisualai/icons` @ `b8ce8c86d7b098836a84ec2b40d259195b7f4494`; LESS `princeton-nlp/LESS` @ `8abf9628b9a814ac3045445eebc8ba3c908fdc78`; XMAS `BigML-CS-UCLA/XMAS` @ `e534dd99e9ce9b7be345bd55e055c9b4e5c91c90` (fork of `NilayN7/XMAS` @ `4fda84bfc7acf387c092dc93d0d15b299fe197d8`; MIT); VisNec `DMK041218/VisNec` @ `d894598ef9ba3e03da847a47464185c6262d230f` (ECCV 2026; no license file in the repo: use for research reproduction only, do not copy its code into this repository); CoIDO `SuDIS-ZJU/CoIDO` @ `a91906703267741e73532b5b560593d899ffa252` (AGPL-3.0); PreSel `bardisafa/PreSel` @ `2dd6709de1fa5d687f88e55377118a38716144ca` (MIT) | record the commit you actually ran |
 
 Hugging Face revisions at hand-over (2026-11-11): checkpoints `ec9d98a2b071f2873889ad7f6e6dc66a02c481e6`, selections `3074f2b1ca0aa15b4ac0dbced03afd637d84cc75`. Download with `--revision`
 these values so later card edits cannot change your inputs.
@@ -92,7 +98,7 @@ If any hash does not match, **stop** and report; never substitute a "similar" fi
    tuning. Methods that prescribe target/validation tasks (ICONS, LESS, XMAS if applicable) use only those, recorded.
 10. **Report everything:** every seed and every attempt, including failures and partial runs, with GPU-hours.
 
-## 4. Running on 8× A100 80GB
+## 4. Running on 8× A100 40GB
 **Setup (once).** Create the environment from `env/requirements-native-env.txt` (CUDA 12.1 wheels); verify
 `python -c "import xformers, torch; print(xformers.__version__, torch.__version__)"` → `0.0.23.post1 2.1.2+cu121`.
 Download the three base assets at the pinned revisions to local directories (no symlinked caches that other jobs may
@@ -121,7 +127,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/eval_portable.py llava.eval.model_vqa_load
 Each checkpoint folder's `config.json` names the CLIP tower by its Hub id; have the pinned revision in your HF cache.
 
 **Throughput planning.** Measured on one L40S: about 67–77 s per optimizer step, i.e. ≈10–11 h for a 10% run
-(scale linearly with K). Expect an A100 80GB to be similar or faster; use the T0b wall time to plan. Core-four
+(scale linearly with K). Measure A100 40GB throughput with T0b rather than assuming the L40S timing. Core-four
 evaluation is roughly 2–4 GPU-h per checkpoint and the extended eight a similar amount (judge calls are API-bound).
 Capacity is ≈190 GPU-h per day; the full roster in §6 is on the order of 900–1,300 GPU-h (estimates, not budgets).
 
@@ -159,8 +165,8 @@ Capacity is ≈190 GPU-h per day; the full roster in §6 is on the order of 900�
   logs in `CALIBRATION_REPORT.md`. Tasks whose gate passed may continue.
 
 ## 6. Tasks
-Execution sequence (binding): `AGENTS.md` §3a. Summary: T0 → T1 → T5 → T2 → T3 → T4 (10%) → T9 → T10 → lead
-checkpoint → T8 → T4 (5%/20%) → approved extra budgets → optional T6, T7, T11. Selection-side compute of T4/T9/T10 runs in
+Execution sequence (binding): `AGENTS.md` §3a. Summary: T0 → T1 → T5 → T2 → T3 → T4 (10%) → T12 → T9 → T10 → lead
+checkpoint → T8 → T4 (5%/20%) → approved extra budgets → optional T6, T7, T11. Selection-side compute of T4/T12/T9/T10 runs in
 parallel from day 0.
 
 | ID | Task | Gate | Inputs | Deliverable | Rough A100 GPU-h |
@@ -171,6 +177,7 @@ parallel from day 0.
 | T3 | Train + evaluate **DataTailor 15% t17** (`selections/datatailor/b15/sel1234`, K=99,108, 774 steps) | T0b | selection | checkpoint + row | ~20 |
 | T4 | **ICONS, faithful** (official code + defaults: its warm-up, gradient features, influence-consensus selection over its prescribed target tasks). 10% × seeds 17/29/43 first; then 5% and 20% × 3 seeds | selection: none; students: T0b | pool ids, official repo | 3 selections, 9 checkpoints, rows, `ICONS_FIDELITY.md` | ~150–250 |
 | T5 | Extended eight for every provided checkpoint that lacks it (list below) and for every new checkpoint from T2–T4, T8–T10 | T0a, T0c | checkpoints | rows | ~3 each |
+| T12 | **VisNec, faithful (required)** — closest prior art to the project's visual-necessity filter. Official code `DMK041218/VisNec` @ `d894598ef9ba3e03da847a47464185c6262d230f`: compute VisNec scores with `scripts/cal_visnec.py` exactly as in `scripts/cal_visnec.sh` (Stage-1 model = Vicuna-7B-v1.5 + stage-1 projector, its bf16/batch settings) on the 660,763 eligible records; select with `scripts/task_distribution.py` unchanged except paths and `TOP_RATIO = 0.10` (20 MiniBatchKMeans clusters of all-MiniLM-L6-v2 instruction embeddings, random_state 42, top 10% per cluster by VisNec). Keep the realised K (sum of per-cluster int(n×0.10), slightly below 66,076) and report it; never top up. Deterministic selection (no selection seed). **Fidelity check first (cheap):** also run `TOP_RATIO = 0.15` on the full `llava_v1_5_mix665k.json` and report the overlap with the authors' released `llava_v1.5-7b-top15.json` (HF dataset `aaakiyasuqqqa/VisNec`); stop and ask if it is far below ~90%. Then 10% × seeds 17/29/43 with `train_portable.py` (natural steps of the realised K) + core/extended evaluation. Label `VisNec` (disclose: eligible-pool restriction and 10% ratio); any other deviation → `VisNec-adapted`. 5%/20% only if the lead approves at the P13 checkpoint | selection: none; students: T0b | pool ids, official repo, released top-15 subset | selection, 3 checkpoints, rows, `VISNEC_FIDELITY.md` | ~80–160 |
 | T9 | **XMAS, faithful** (official code: proxy training with its released proxy config, cross-modal alignment trajectories over its checkpoints, clustering and stability sampling). 10% × seeds 17/29/43. Known release defects to fix and disclose (do not change the method): `cluster_and_sample.sh` defines `BUDGET` but passes `PERCENTAGE`; the stability path's `random.sample` ignores the CLI seed; the clustering script silently skips checkpoints whose metrics fail to load (must fail instead) | selection: none; students: T0b | pool ids, official repo | selection(s), 3 checkpoints, rows, `XMAS_FIDELITY.md` | ~120–200 |
 | T10 | **CoIDO, faithful** (official code: CLIP features, ImageReward and CLIP scores, LLM quality judge, stage-1 scorer trained on the paper's 20% random sample, stage-2 selection). 10% × seeds 17/29/43. Record the LLM judge model/version/cost; the README notes the release omits the paper's similarity filtering — if the release differs from the paper, label the row `CoIDO-release` and describe it. AGPL-3.0: keep its code in its own repository/directory | selection: none; students: T0b | pool ids, official repo, LLM API | selection, 3 checkpoints, rows, `COIDO_FIDELITY.md` | ~100–150 + API |
 | T8 | **Full-data reference**: all 660,763 eligible records (`pool/pool_record_ids.json`), seed 17, 5,162 steps; multi-GPU allowed (§3.3); record the layout | T0b | pool | checkpoint + row (core + extended) | ~80–120 |
@@ -178,7 +185,7 @@ parallel from day 0.
 | T7 (optional) | **Source-sqrt** at 5% and 20% (selector `src/experiments/root_native_campaign_v7_20261024/selection.py`, method `source_sqrt`, selection seed 1234), 3 seeds each | T0b | pool | 2 selections, 6 checkpoints, rows | ~90 |
 | T11 (optional, approval first) | **PreSel-adapted**: PreSel selects images before instructions exist; on this pool it is necessarily an adaptation. Write the adaptation plan (task/source mapping, image-level → conversation-level mapping, K) and get the lead's approval **before** spending compute; 10% × 3 seeds | approval, T0b | official repo | plan, selection, 3 checkpoints, rows, `PRESEL_FIDELITY.md` | ~100 |
 
-**After T4/T9/T10 have 10% results:** report them and ask the lead which one or two methods get 5%/20% runs. Do not
+**After T4/T12/T9/T10 have 10% results:** report them and ask the lead which one or two methods get 5%/20% runs. Do not
 start budget curves for XMAS or CoIDO on your own.
 
 **T5 list (from the HF repo contents, 2026-11-11).** Missing all eight extended benchmarks (19):

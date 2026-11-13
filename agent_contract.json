@@ -8,7 +8,8 @@
  ],
  "hardware": {
   "gpus": 8,
-  "type": "NVIDIA A100 80GB",
+  "type": "NVIDIA A100 40GB",
+  "hardware_correction": "Project lead, 2026-11-12: use the existing 40GB instance with the fixed recipe; report a demonstrated memory blocker.",
   "provided_runs_hardware": "1x NVIDIA L40S per run"
  },
  "inputs": {
@@ -70,6 +71,12 @@
    "datatailor_provided": {
     "repo": "Yuqifan1117/DataTailor",
     "commit": "d6fa5eb6bc2920a561c614abb6b841a128affb92"
+   },
+   "visnec": {
+    "repo": "DMK041218/VisNec",
+    "commit": "d894598ef9ba3e03da847a47464185c6262d230f",
+    "license": "none in repo (research reproduction only; do not vendor)",
+    "released_selection": "HF dataset aaakiyasuqqqa/VisNec: llava_v1.5-7b-top15.json"
    }
   },
   "hf_revisions": {
@@ -395,6 +402,37 @@
    "gpu_h": "~3 per checkpoint"
   },
   {
+   "id": "T12",
+   "required": true,
+   "depends_on": {
+    "selection": [],
+    "students": [
+     "T0b"
+    ]
+   },
+   "action": "select+train+evaluate",
+   "method": "VisNec (faithful)",
+   "pin": {
+    "repo": "DMK041218/VisNec",
+    "commit": "d894598ef9ba3e03da847a47464185c6262d230f",
+    "license": "none in repo (research reproduction only; do not vendor)",
+    "released_selection": "HF dataset aaakiyasuqqqa/VisNec: llava_v1.5-7b-top15.json"
+   },
+   "scoring": "scripts/cal_visnec.py exactly as scripts/cal_visnec.sh, on the 660,763 eligible records",
+   "selection": "scripts/task_distribution.py unchanged except paths and TOP_RATIO=0.10; keep realised K (no top-up); deterministic",
+   "fidelity_check": "TOP_RATIO=0.15 on full llava_v1_5_mix665k.json vs released llava_v1.5-7b-top15.json overlap; stop and ask if far below ~90%",
+   "budgets_seeds": {
+    "b10": [
+     17,
+     29,
+     43
+    ]
+   },
+   "label": "VisNec (disclose eligible-pool restriction and 10% ratio); other deviations -> VisNec-adapted",
+   "fidelity_note": "VISNEC_FIDELITY.md",
+   "gpu_h": "~80-160"
+  },
+  {
    "id": "T9",
    "required": true,
    "depends_on": {
@@ -550,6 +588,7 @@
   "T2",
   "T3",
   "T4:b10",
+  "T12",
   "T9",
   "T10",
   "LEAD_CHECKPOINT",
@@ -560,7 +599,7 @@
   "T7",
   "T11"
  ],
- "after_new_baselines_10pct": "report and ask the lead which 1-2 of ICONS/XMAS/CoIDO get 5%/20% runs",
+ "after_new_baselines_10pct": "report ICONS/VisNec/XMAS/CoIDO 10% results and ask the lead which get 5%/20% runs",
  "outputs": {
   "results_csv": "results/coauthor/RESULTS.csv (columns of results/RESULTS_TEMPLATE.csv; one row per cell + one per failed attempt)",
   "run_log": "results/coauthor/RUN_LOG.md",
@@ -585,5 +624,13 @@
   "committing tokens/API keys; re-hosting LLaVA-665K text or images"
  ],
  "sequence_doc": "AGENTS.md section 3a",
- "scheduling_rule": "when a GPU is free, start the highest-priority item whose dependencies are met; selection-side compute of T4/T9/T10 may run from day 0 without a gate"
+ "scheduling_rule": "when a GPU is free, start the highest-priority item whose dependencies are met; selection-side compute of T4/T9/T10 may run from day 0 without a gate",
+ "project_lead_overrides": {
+  "date": "2026-11-12",
+  "deferred_benchmarks": [
+   "LLaVA-W",
+   "MM-Vet"
+  ],
+  "instruction": "Skip judge experiments for now. Continue core-four and six locally scored extended metrics with their respective calibration gates. Deferred metrics remain blank; selector quality judges are not implicitly waived."
+ }
 }
