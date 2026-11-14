@@ -30,17 +30,27 @@ The lead's study plan changed on 2026-11-13. Where this section conflicts with o
 3. **New baselines go straight to all three budgets.** ICONS (T4), VisNec (T12), XMAS (T9) and CoIDO (T10): 10% → 5% →
    20%, seed 17 each; the old "ask the lead after 10%" checkpoint (P13) is removed. Score/feature once where the official
    method allows and cut at each budget with its own official procedure (keep realised K; never top up).
+   This authorizes coverage, not an unsupported native setting: if a method cannot support a budget faithfully,
+   report that cell as blocked and request a separately labelled adaptation instead of inventing a reproduction.
 4. **Second base model: LLaVA-1.5-13B (new T13).** Our own method variants already train at 13B on our cluster; you own
    the **baseline side** of 13B: train LLaVA-1.5-13B on the existing provided selections of Uniform, DataTailor and
    COINCIDE at 5% and 10% (seed 17), then the new faithful baselines at 10%. Same recipe (§3.2), same evaluation (§3.6).
-   13B does not fit one A100 40GB with per-device batch 4 (our L40S runs peak at 39 GiB allocated / 43.7 GiB reserved),
-   so T13 is the **only other task allowed two GPUs**: ZeRO-3 over 2 GPUs, per-device 4 × accumulation 16 × world 2 =
+   Our L40S memory measurements do not establish whether the same run fits an A100 40GB: reserved memory is not
+   an unavoidable allocation requirement. The authorized layout to qualify for T13 is ZeRO-3 over 2 GPUs,
+   per-device 4 × accumulation 16 × world 2 =
    global 128. Disclose the layout in every T13 row. T13 students wait for gate **T0d** (§5).
 5. **Diagnose before retrying.** On 2026-11-13, 16/24 extended-evaluation attempts and the T3 training run failed in two
    simultaneous bursts (04:23 and 06:27 UTC; "CUDA launch failure"). Before any retry or new long run, find the cause
    (GPU/driver Xid events in `dmesg`/`nvidia-smi -q`, other users' processes on the same GPUs, memory pressure) and record
-   it in `RUN_LOG.md`. Prefer GPUs no other workload uses.
+   it in `RUN_LOG.md`. The correlated failures do not establish their cause; include application, driver,
+   orchestration and GPU-ownership evidence. Prefer GPUs no other workload uses.
 6. **Judge deferral unchanged** (LLaVA-W, MM-Vet stay deferred).
+7. **No duplicate work or baseline cherry-picking.** Reconcile each cell against our checkpoint index, your results,
+   live jobs and producer ownership before acquisition. Preserve all available baseline seeds and negative results.
+   T13 reuses selections to test transfer to a different training model; it is not a new native 13B selector run.
+   Keep historical adaptation labels, including COINCIDE's adaptation label. The full-data reference (T8) remains
+   gated on reconciliation with the manager's existing ownership and any live or accepted continuation; a missing
+   score alone is not permission to start a second trajectory.
 
 ## 2. Inputs (read-only; verify every hash before use)
 | Input | Location / identity | Verification |
@@ -51,13 +61,13 @@ The lead's study plan changed on 2026-11-13. Where this section conflicts with o
 | Training data | `llava_v1_5_mix665k.json`, HF `liuhaotian/LLaVA-Instruct-150K` @ `9d451dc7629cfe0469f6ae4432b765cd603d5fcb` (sha256 `ce959ce6…af6cf8`), plus the official LLaVA-1.5 image folders `coco/train2017`, `gqa/images`, `ocr_vqa/images`, `textvqa/train_images`, `vg/VG_100K{,_2}` | `scripts/reconstruct_records.py` must reproduce each selection's `records.json` sha256 |
 | Base model | `lmsys/vicuna-7b-v1.5` @ `3321f76e3f527bd14065daf69dad9344000a201d`; `openai/clip-vit-large-patch14-336` @ `ce19dc912ca5cd21c8a653c79e251e808ccabcd1`; stage-1 projector `liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-7b-v1.5` @ `5414da88308e4287a29f2e9609256458afb0a981` | download with `--revision <sha>`; these are also the current `main` revisions |
 | Base model, 13B (T13 only) | `lmsys/vicuna-13b-v1.5` @ `c8327bf999adbd2efe2e75f6509fa01436100dc2`; same CLIP tower; stage-1 projector `liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-13b-v1.5` @ `e362f049527e677c163c89a4449c780256e4beb8` | download with `--revision <sha>` |
-
-**13B model identity (binding).** "LLaVA-1.5-13B" here means the LLaVA-1.5 architecture assembled from the three pretrained parts above (Vicuna-13B-v1.5 + CLIP ViT-L/14-336 + the 13B stage-1 projector), then stage-2 LoRA instruction-tuned on each selection. **Never initialise from `liuhaotian/llava-v1.5-13b`** (or any other stage-2 / instruction-tuned LLaVA checkpoint): it was already trained on the full 665K mixture, which would invalidate every data-selection comparison. The 7B rows are built the same way (Vicuna-7B-v1.5 + 7B stage-1 projector).
 | LLaVA code | `haotian-liu/LLaVA` @ `c121f0432da27facab705978f83c4ada465e46fd`. The `llava/` package is vendored under `src/collaboration/published-foundation-20261022/reference_sources/LLaVA/c121…/` and used by the portable scripts by default; clone the repo at this commit as well for its `scripts/` (e.g. `scripts/convert_gqa_for_eval.py`, `scripts/v1_5/eval/*.sh`) | `git rev-parse HEAD` |
 | Environment | `env/requirements-native-env.txt` (Python 3.10.19, torch 2.1.2+cu121, transformers 4.37.2, peft 0.7.1, deepspeed 0.12.6, **xformers 0.0.23.post1**) | `pip freeze` diff in `CALIBRATION_REPORT.md` |
 | Evaluation inputs | LLaVA `eval.zip` (c121 instructions) + official benchmark images; hashes in `docs/EVAL_INPUTS.md` | hashes |
 | Reference scores | `results/baseline_core4_per_run.csv`, `results/baseline_extended_reported.csv`, per-run `eval/**/SCORE*.json` and `PREDICTIONS.jsonl` on the HF model repo | — |
 | Official baseline code (pins) | ICONS `princetonvisualai/icons` @ `b8ce8c86d7b098836a84ec2b40d259195b7f4494`; LESS `princeton-nlp/LESS` @ `8abf9628b9a814ac3045445eebc8ba3c908fdc78`; XMAS `BigML-CS-UCLA/XMAS` @ `e534dd99e9ce9b7be345bd55e055c9b4e5c91c90` (fork of `NilayN7/XMAS` @ `4fda84bfc7acf387c092dc93d0d15b299fe197d8`; MIT); VisNec `DMK041218/VisNec` @ `d894598ef9ba3e03da847a47464185c6262d230f` (ECCV 2026; no license file in the repo: use for research reproduction only, do not copy its code into this repository); CoIDO `SuDIS-ZJU/CoIDO` @ `a91906703267741e73532b5b560593d899ffa252` (AGPL-3.0); PreSel `bardisafa/PreSel` @ `2dd6709de1fa5d687f88e55377118a38716144ca` (MIT) | record the commit you actually ran |
+
+**13B model identity (binding).** "LLaVA-1.5-13B" here means the LLaVA-1.5 architecture assembled from the three pretrained parts above (Vicuna-13B-v1.5 + CLIP ViT-L/14-336 + the 13B stage-1 projector), then stage-2 LoRA instruction-tuned on each selection. **Never initialise from `liuhaotian/llava-v1.5-13b`** (or any other stage-2 / instruction-tuned LLaVA checkpoint): it was already trained on the full 665K mixture, which would invalidate this comparison of stage-2 data selections. The 7B rows are built the same way (Vicuna-7B-v1.5 + 7B stage-1 projector).
 
 Hugging Face revisions at hand-over (2026-11-11): checkpoints `ec9d98a2b071f2873889ad7f6e6dc66a02c481e6`, selections `3074f2b1ca0aa15b4ac0dbced03afd637d84cc75`. Download with `--revision`
 these values so later card edits cannot change your inputs.

@@ -109,7 +109,7 @@ is single-GPU except T13 (2 GPUs) and T8 (4–8 GPUs). Gates, tolerances and com
 | 9 | CoIDO 10%, 5%, 20% t17 + evaluation | T10 | P4, CoIDO selections | 1 each | 3 rows + `COIDO_FIDELITY.md` |
 | 10 | **T0d 13B calibration** (as soon as we post the 13B reference; see contract §5) | T0d | 13B reference on HF | 1 (eval) + 2 (retrain) | (a) and (b) pass |
 | 11 | **13B transfer, seed 17:** Uniform, DataTailor, COINCIDE at 5% and 10%; then VisNec/ICONS/XMAS/CoIDO 10% | T13 | P10 | 2 per run | rows + checkpoints |
-| 12 | Full-data reference (660,763 records, 5,162 steps, seed 17; multi-GPU allowed, global batch 128) + evaluation | T8 | P4; start when ≥4 GPUs are free together | 4–8 | step 5,162; row |
+| 12 | Full-data reference (660,763 records, 5,162 steps, seed 17; multi-GPU allowed, global batch 128) + evaluation | T8 | P4 + manager ownership/live-continuation reconciliation; then ≥4 free GPUs | 4–8 | step 5,162; row |
 | 13 | Seeds 29 and 43 for the P6–P9 cells (10% first) | T12, T4, T9, T10 | P6–P9 | 1 each | rows |
 | 14 | Retry the 16 failed T5 extended gaps (after P4), then Uniform 20% t29 | T5, T2 | P4 | 1 each | rows |
 | 15 | *(optional)* Faithful LESS 10% t17; PreSel-adapted plan (approval first) | T6, T11 | P4 | 1 each | rows + fidelity notes |
@@ -122,6 +122,8 @@ after diagnosing the cause; a second failure → stop that item and ask.
 
 Layout from 2026-11-13: after P4, up to 4 GPUs on selection-side compute (P5) and the rest on students as selections
 finish (P6–P9); T13 pairs of GPUs once T0d passes; T8 when ≥4 GPUs are free together.
+T13 is selected-set transfer, not a native 13B selector reproduction. Its two-GPU layout still requires qualification.
+Blocked T13 or T8 does not block other ready work. Do not duplicate manager-owned full-data trajectories.
 
 ## 4. Lessons learned (read before running anything)
 **Protocol and scoring**

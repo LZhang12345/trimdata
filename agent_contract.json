@@ -615,7 +615,8 @@
     "vicuna": "lmsys/vicuna-13b-v1.5@c8327bf999adbd2efe2e75f6509fa01436100dc2",
     "projector": "liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-13b-v1.5@e362f049527e677c163c89a4449c780256e4beb8"
    },
-   "layout": "ZeRO-3, 2 GPUs, per-device 4 x accumulation 16 x world 2 = 128 (disclose)",
+   "layout": "ZeRO-3, 2 GPUs, per-device 4 x accumulation 16 x world 2 = 128 (qualify before production; disclose)",
+   "comparison_type": "existing selected-set transfer, not native 13B selector reproduction; preserve adaptation labels",
    "cells_seed17": [
     "uniform/b05/sel1235",
     "uniform/b10/sel1234",
@@ -709,6 +710,11 @@
   },
   "removed_checkpoint": "P13 lead approval before 5%/20% removed",
   "diagnose_first": "2026-11-13 04:23/06:27 UTC CUDA launch failure bursts must be diagnosed before retries",
-  "judge_deferral": "unchanged"
+  "judge_deferral": "unchanged",
+  "deduplication": "check checkpoint index, coauthor results, live jobs and producer ownership before each cell",
+  "full_data_gate": "T8 requires reconciliation with manager ownership and live or accepted continuations; no duplicate trajectory",
+  "native_budget_gate": "unsupported faithful budgets remain blocked; never invent a reproduction",
+  "baseline_reporting": "all available baseline seeds and negative results; no best-seed or best-variant cherry-picking",
+  "hardware_evidence": "L40S reserved-memory measurements do not prove A100 40GB cannot fit; qualify the authorized two-GPU layout"
  }
 }
