@@ -165,18 +165,13 @@ Each checkpoint folder's `config.json` names the CLIP tower by its Hub id; have 
 **Throughput planning.** Measured on one L40S: about 67–77 s per optimizer step, i.e. ≈10–11 h for a 10% run
 (scale linearly with K). Measure A100 40GB throughput with T0b rather than assuming the L40S timing. Core-four
 evaluation is roughly 2–4 GPU-h per checkpoint and the extended eight a similar amount (judge calls are API-bound).
-Capacity is ≈190 GPU-h per day; the full roster in §6 is on the order of 900–1,300 GPU-h (estimates, not budgets).
+Eight continuously available GPUs would provide at most 192 GPU-h per day; this shared instance does not guarantee
+that availability. Requested walltime and idle waits are not consumed GPU-hours. Measure actual stage costs.
 
-**Suggested schedule** (keep every GPU busy, respect the gates):
-| Phase | GPUs | Work |
-|---|---|---|
-| A (day 0) | 0–1 | T0a: core four for `uniform/b10/sel1234-t17` and `datatailor/b10/sel1234-t17` |
-|  | 2 | T0b: retrain `uniform/b10/sel1235-t17` |
-|  | 3 | T0c: extended eight for `uniform/b10/sel1234-t17` |
-|  | 4–7 | selection-side compute of T4 ICONS, T9 XMAS, T10 CoIDO (warm-ups, proxies, gradients, features) — these use each method's own official procedure, not our recipe, so they need no gate |
-| B (after T0a [+T0c]) | free GPUs | evaluation-only tasks T1 and T5 |
-| C (after T0b) | free GPUs | training tasks T2, T3, then students of T4/T9/T10 as each selection is finalised; T8 when 4–8 GPUs are free together |
-| D | free GPUs | optional T6, T7, T11 if approved |
+**Current schedule:** use only `AGENTS.md` §3a and the current execution brief. The original day-0 schedule is retired.
+T0a/T0b/T0c-local already passed in the coauthor report; verify those receipts and reuse them when compatible rather
+than repeating calibration. T0c-judged stays deferred. Diagnose the reported failures, then prioritize new seed-17
+coverage. Missing T0d or full-data ownership clearance does not block unrelated ready work.
 
 ## 5. Gates (must pass before dependent tasks)
 * **T0a — evaluation calibration** (unlocks evaluation tasks T1, and the core-four part of T5/T2–T4/T8–T10 evaluation):
@@ -189,7 +184,7 @@ Capacity is ≈190 GPU-h per day; the full roster in §6 is on the order of 900�
   `uniform/b10/sel1234-t17` and compare to its `eval/extended/*/SCORE*.json` (MME-P 1360.2, MME-C 311.8, SEED-img 59.87,
   MMMU 32.78, MMBench-EN dev 58.76, LLaVA-W 56.5, MM-Vet 26.6, VizWiz 43.43). **Pass:** MME-P ±15, MME-C ±10,
   SEED/MMMU/MMBench ±0.5, VizWiz ±1.0, LLaVA-W/MM-Vet ±2.0 (judge variance). Otherwise **stop** and report per bank.
-* **T0b — training calibration** (unlocks every training task): retrain `uniform/b10/sel1235-t17` from
+* **T0b — 7B training calibration** (unlocks 7B student tasks; 13B uses T0d): retrain `uniform/b10/sel1235-t17` from
   `selections/uniform/b10/sel1235` (K=66,076, seed 17, 516 steps). This reference was produced by the same deterministic
   CUTLASS trainer configuration that `train_portable.py` reproduces.
   * **Early check (first ~1 h, abort on failure):** the log must show learning rate `0.000125` at step 10, the three-group
@@ -205,6 +200,12 @@ Capacity is ≈190 GPU-h per day; the full roster in §6 is on the order of 900�
   reference `trainer_state.json`; final core average within ±0.50, no bank off by more than ±1.0. Record peak memory per GPU.
   If the 2-GPU layout does not reproduce, **stop and ask** (do not change per-device batch or accumulation on your own).
   A passing T0d (b) retrain is also the T13 row for `uniform/b05/sel1235` seed 17 (do not train it twice).
+  T0d's evaluation and calibration retrain are permitted qualification work once their inputs and device readiness
+  are verified; they do not depend on their own final PASS. Other T13 production cells do depend on that PASS.
+  At this handover, the reference is pending delivery: require an exact HF revision, checkpoint checksums,
+  `trainer_state.json`, raw predictions and score manifest before starting. Do not mistake the future path for
+  an uploaded artifact. Frozen multi-GPU calibration tolerances may fail because the sampler/order differs;
+  that is a diagnosis requirement, not permission to relax the thresholds after observing results.
 * On any gate failure: **stop** the dependent tasks and report the deltas, environment (`pip freeze`), GPU/driver and
   logs in `CALIBRATION_REPORT.md`. Tasks whose gate passed may continue.
 
@@ -219,21 +220,23 @@ T9 XMAS → T10 CoIDO, each 10% → 5% → 20% with seed 17 → T13 (13B, after 
 | T1 | Core four + extended eight for COINCIDE 20% t29 and t43; extended eight for COINCIDE 20% t17 | T0a, T0c | `coincide/b20/selfixed-t{17,29,43}` | 3 rows | ~15 |
 | T2 | Train + evaluate **Uniform 20% t29** (`selections/uniform/b20/sel1235`, K=132,147, 1,032 steps) | T0b | selection | checkpoint + row | ~25 |
 | T3 (**cancelled 2026-11-13**: 15% dropped) | ~~Train + evaluate DataTailor 15% t17~~ (`selections/datatailor/b15/sel1234`, K=99,108, 774 steps) | T0b | selection | checkpoint + row | ~20 |
-| T4 | **ICONS, faithful** (official code + defaults: its warm-up, gradient features, influence-consensus selection over its prescribed target tasks). **Amended 2026-11-13:** 10%, 5%, 20% with seed 17 first; seeds 29/43 later | selection: none; students: T0b | pool ids, official repo | 3 selections, 9 checkpoints, rows, `ICONS_FIDELITY.md` | ~150–250 |
+| T4 | **ICONS, faithful** (official code + defaults: its warm-up, gradient features, influence-consensus selection over its prescribed target tasks). **Amended 2026-11-13:** 10%, 5%, 20% with seed 17 first; seeds 29/43 later | selection: setup/diagnosis; students: T0b | pool ids, official repo | 3 selections, 3 seed-17 checkpoints now; 6 extra-seed checkpoints later; rows, `ICONS_FIDELITY.md` | ~150–250 (original multi-seed estimate) |
 | T5 | Extended eight for every provided checkpoint that lacks it (list below) and for every new checkpoint from T2–T4, T8–T10 | T0a, T0c | checkpoints | rows | ~3 each |
 | T12 | **VisNec, faithful (required)** — closest prior art to the project's visual-necessity filter. Official code `DMK041218/VisNec` @ `d894598ef9ba3e03da847a47464185c6262d230f`: compute VisNec scores with `scripts/cal_visnec.py` exactly as in `scripts/cal_visnec.sh` (Stage-1 model = Vicuna-7B-v1.5 + stage-1 projector, its bf16/batch settings) on the 660,763 eligible records; select with `scripts/task_distribution.py` unchanged except paths and `TOP_RATIO = 0.10` (20 MiniBatchKMeans clusters of all-MiniLM-L6-v2 instruction embeddings, random_state 42, top 10% per cluster by VisNec). Keep the realised K (sum of per-cluster int(n×0.10), slightly below 66,076) and report it; never top up. Deterministic selection (no selection seed). **Fidelity check first (cheap):** also run `TOP_RATIO = 0.15` on the full `llava_v1_5_mix665k.json` and report the overlap with the authors' released `llava_v1.5-7b-top15.json` (HF dataset `aaakiyasuqqqa/VisNec`); stop and ask if it is far below ~90%. Then (amended 2026-11-13) 10%, 5% and 20% (`TOP_RATIO` 0.10 / 0.05 / 0.20, same scores and clusters) with seed 17 first, seeds 29/43 later, with `train_portable.py` (natural steps of the realised K) + core/extended evaluation. Label `VisNec` (disclose: eligible-pool restriction and 10% ratio); any other deviation → `VisNec-adapted`. | selection: none; students: T0b | pool ids, official repo, released top-15 subset | selection, 3 checkpoints, rows, `VISNEC_FIDELITY.md` | ~80–160 |
 | T9 | **XMAS, faithful** (official code: proxy training with its released proxy config, cross-modal alignment trajectories over its checkpoints, clustering and stability sampling). Amended 2026-11-13: 10%, 5%, 20% with seed 17 first; seeds 29/43 later. Known release defects to fix and disclose (do not change the method): `cluster_and_sample.sh` defines `BUDGET` but passes `PERCENTAGE`; the stability path's `random.sample` ignores the CLI seed; the clustering script silently skips checkpoints whose metrics fail to load (must fail instead) | selection: none; students: T0b | pool ids, official repo | selection(s), 3 checkpoints, rows, `XMAS_FIDELITY.md` | ~120–200 |
 | T10 | **CoIDO, faithful** (official code: CLIP features, ImageReward and CLIP scores, LLM quality judge, stage-1 scorer trained on the paper's 20% random sample, stage-2 selection). Amended 2026-11-13: 10%, 5%, 20% with seed 17 first; seeds 29/43 later. Record the LLM judge model/version/cost; the README notes the release omits the paper's similarity filtering — if the release differs from the paper, label the row `CoIDO-release` and describe it. AGPL-3.0: keep its code in its own repository/directory | selection: none; students: T0b | pool ids, official repo, LLM API | selection, 3 checkpoints, rows, `COIDO_FIDELITY.md` | ~100–150 + API |
 | T13 | **LLaVA-1.5-13B transfer (added 2026-11-13).** Train 13B (pins in §2, same recipe, 2-GPU layout of §1a) on existing provided selections, seed 17: `uniform/b05/sel1235`, `uniform/b10/sel1234`, `datatailor/b05/sel1234`, `datatailor/b10/sel1234`, `coincide/b05/selfixed`, `coincide/b10/sel1234` (realised K; 258 / 516 steps). Then the new faithful baselines' 10% selections (VisNec, ICONS, XMAS, CoIDO) at 13B, seed 17. Core four + local extended. Rows carry `base_model=llava-1.5-13b` and the GPU layout in `notes`; checkpoints under `13b/<method>/<bNN>/...`. 20% and extra seeds later | T0d | selections, 13B pins | ≈10 checkpoints, rows | ~10 per 5% run, ~20 per 10% run (2 GPUs) + eval |
-| T8 | **Full-data reference**: all 660,763 eligible records (`pool/pool_record_ids.json`), seed 17, 5,162 steps; multi-GPU allowed (§3.3); record the layout | T0b | pool | checkpoint + row (core + extended) | ~80–120 |
-| T6 (optional) | **Faithful LESS** (official pipeline at the pin, paper defaults: LoRA warm-up, Adam-preconditioned projected gradients, its target-task dev sets), 10% × 3 seeds; `less_approx` keeps its own label | students: T0b | pool, official repo | selection, 3 checkpoints, rows, `LESS_FIDELITY.md` | ~100 |
-| T7 (optional) | **Source-sqrt** at 5% and 20% (selector `src/experiments/root_native_campaign_v7_20261024/selection.py`, method `source_sqrt`, selection seed 1234), 3 seeds each | T0b | pool | 2 selections, 6 checkpoints, rows | ~90 |
+| T8 | **Full-data reference**: all 660,763 eligible records (`pool/pool_record_ids.json`), seed 17, 5,162 steps; multi-GPU allowed (§3.3); record the layout | T0b + manager ownership/live-continuation clearance | pool | checkpoint + row (core + local extended) | ~80–120 |
+| T6 (optional, later) | **Faithful LESS** (official pipeline at the pin, paper defaults: LoRA warm-up, Adam-preconditioned projected gradients, its target-task dev sets), 10% seed 17 first; extra seeds later; `less_approx` keeps its own label | students: T0b | pool, official repo | selection, checkpoint, rows, `LESS_FIDELITY.md` | ~100 (original multi-seed estimate) |
+| T7 (dropped 2026-11-13) | Source-sqrt 5%/20% is not in this execution wave; preserve historical work only | — | — | — | No new jobs |
 | T11 (optional, approval first) | **PreSel-adapted**: PreSel selects images before instructions exist; on this pool it is necessarily an adaptation. Write the adaptation plan (task/source mapping, image-level → conversation-level mapping, K) and get the lead's approval **before** spending compute; 10% × 3 seeds | approval, T0b | official repo | plan, selection, 3 checkpoints, rows, `PRESEL_FIDELITY.md` | ~100 |
 
 **After T4/T12/T9/T10 have 10% results:** post the numbers in `RUN_LOG.md` and continue to 5%/20% (amended 2026-11-13; no
 approval stop).
 
-**T5 list (from the HF repo contents, 2026-11-11).** Missing all eight extended benchmarks (19):
+**T5 historical list (HF snapshot, 2026-11-11; not a current ready queue).** Reconcile each bank with the coauthor's
+completed results before any retry. Exclude all 15% jobs and deferred judged banks from this wave.
+Originally missing all eight extended benchmarks (19):
 `coincide/b05/selfixed-t29,-t43`; `coincide/b20/selfixed-t17,-t29,-t43`; `datatailor/b05/sel1234-t29,-t43`;
 `datatailor/b15/sel1234-t29`; `datatailor/b20/sel1234-t29,-t43`; `less_approx/b10/sel1234-t29,-t43`;
 `uniform/b05/sel1235-t29,-t43`; `uniform/b15/sel1235-t29,-t43`; `uniform/b20/sel1235-t43`;
@@ -247,8 +250,11 @@ released and does not change T8.
 
 ## 7. Outputs (hand-back)
 1. **`results/coauthor/RESULTS.csv`** with exactly the columns of `results/RESULTS_TEMPLATE.csv`: one row per
-   (method, budget, selection seed, training seed) plus **one row per failed attempt** (scores empty, cost filled).
+   (base model, method, budget, selection seed, training seed) plus **one row per failed attempt** (scores empty, cost filled).
    Percent with two decimals; MME in points; `global_steps`, `natural_steps`, `gpu_type`, GPU-hours per stage, hashes.
+   Keep the existing CSV schema: write `base_model=llava-1.5-7b` or `base_model=llava-1.5-13b` in every new row's
+   `notes`. Historical untagged rows are 7B. Aggregation and deduplication must include that base-model identity;
+   never replace a 7B row with a 13B row sharing the remaining keys.
 2. **Checkpoints** in an HF repo you control, layout `<method>/<bNN>/<selXXXX|selfixed>-t<seed>/`, each with
    `adapter_model.safetensors`, `adapter_config.json`, `non_lora_trainables.bin`, `config.json`, `trainer_state.json`,
    `PORTABLE_RUN_SUMMARY.json`, `provenance.json` (code commit, selection sha256, steps, K, hardware, scores) and

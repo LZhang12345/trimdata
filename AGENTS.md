@@ -1,28 +1,33 @@
 # AGENTS.md — start here (for AI agents and new collaborators)
 
-You are taking over part of a research study on **instruction-data selection for LLaVA-1.5-7B**. This file is the
+You are taking over part of a research study on **instruction-data selection for LLaVA-1.5-7B and 13B**. This file is the
 entry point: what the project is, where everything is, what is done, what you are expected to do, and the practical
 lessons learned so far. It is written so that an agent with no prior context can start correctly.
 
 ## 0. Read in this order
 1. **This file** — orientation, map, status, **run order (§3a)**, lessons.
-2. [`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) — your **binding work order** for 8× A100 40GB (scope, inputs, fixed protocol, calibration
-   gate, tasks T0–T7, outputs, acceptance criteria, stop-and-ask rules). Machine-readable: [`agent_contract.json`](agent_contract.json).
-3. [`README.md`](README.md) — full recipe, evaluation protocol, results tables, checkpoint/selection index, known gaps.
-4. Only then open `src/` (see the map below) for the exact code that produced each result.
+2. [`docs/COAUTHOR_NEXT_WAVE_20261113.md`](docs/COAUTHOR_NEXT_WAVE_20261113.md) — concise current assignment,
+   missing-cell roster, ready versus gated work, exclusions and hand-back.
+3. [`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) — your **binding work order** for 8× A100 40GB. Read §1a first;
+   it overrides older task-order text. Tasks T0–T13, calibration, protocol and reporting are defined here.
+   Machine-readable: [`agent_contract.json`](agent_contract.json).
+4. [`README.md`](README.md) — reference recipe, historical results and checkpoint/selection index.
+5. Only then open `src/` (see the map below) for the exact code that produced each result.
 
 If this file, the contract and the README disagree: **contract > README > this file**. Ask the project lead about any
 remaining conflict instead of guessing.
 
 Project-lead updates (2026-11-12): the instance has 40GB GPUs. LLaVA-W and MM-Vet judge experiments are
 deferred; continue core-four and locally scored extended work with the corresponding calibration gates.
-Active campaign handover: read [`results/coauthor/INSTANCE_STATUS.md`](results/coauthor/INSTANCE_STATUS.md)
-before launching anything; detached calibration and staging processes may already be running.
+Before launching, read the coauthor results and run log and inspect live owned processes: detached controllers
+may already be running. `results/coauthor/INSTANCE_STATUS.md` was referenced by the previous agent but was not
+committed at the audited handover. If present locally, reconcile it; if absent, reconstruct current status from
+the instance and record it rather than assuming no work is active or blocking all work on the missing file.
 
 ## 1. The study in one paragraph
 Fine-tune LLaVA-1.5-7B (stage 2, LoRA, one natural epoch, fixed recipe) on a **subset** of the 660,763 eligible
 conversations of `llava_v1_5_mix665k.json`, chosen by a data-selection method under a fixed **selected-data budget K**
-(5% = 33,032; 10% = 66,076, the anchor; 15% = 99,108; 20% = 132,147). Compare selection methods by the trained model's
+(5% = 33,032; 10% = 66,076, the anchor; 20% = 132,147; 15% is historical only). Compare selection methods by the trained model's
 scores on four full official benchmarks (POPE, GQA, TextVQA, ScienceQA-IMG; 28,505 questions) and an eight-benchmark
 extended suite. Provided baselines: Uniform random (the random baseline), source-sqrt, COINCIDE, DataTailor,
 LESS-approx (not faithful LESS). Still to run (your tasks): ICONS, VisNec, XMAS, CoIDO, a full-data reference, optionally faithful
@@ -102,7 +107,7 @@ is single-GPU except T13 (2 GPUs) and T8 (4–8 GPUs). Gates, tolerances and com
 |---|---|---|---|---|---|
 | 0–3 | Setup and calibration T0a/T0b/T0c-local — **done 2026-11-12** | T0 | — | — | passed |
 | 4 | **Diagnose the 2026-11-13 failure bursts** (04:23 and 06:27 UTC; CUDA launch failures; T3 crash at step 460): `dmesg`/Xid, `nvidia-smi -q`, other processes on those GPUs. Record cause and remedy | — | — | 0 | cause in `RUN_LOG.md` |
-| 5 | *[parallel]* Selection-side compute, in this order: **VisNec** (+ fidelity check) → ICONS → XMAS → CoIDO; produce 10%, 5%, 20% selections each | T12, T4, T9, T10 | P0 | up to 4 | `record_ids.json` + `selection_meta.json` per method × budget |
+| 5 | *[parallel]* Selection-side compute, in this order: **VisNec** (+ fidelity check) → ICONS → XMAS → CoIDO; produce 10%, 5%, 20% selections each | T12, T4, T9, T10 | Setup; P4 additionally required for long GPU work | up to 4 | `record_ids.json` + `selection_meta.json` per method × budget |
 | 6 | **VisNec 10% t17**, then 5% t17, then 20% t17 + evaluation (required) | T12 | P4, VisNec selections | 1 each | 3 rows + `VISNEC_FIDELITY.md` |
 | 7 | ICONS 10%, 5%, 20% t17 + evaluation | T4 | P4, ICONS selections | 1 each | 3 rows + `ICONS_FIDELITY.md` |
 | 8 | XMAS 10%, 5%, 20% t17 + evaluation | T9 | P4, XMAS selections | 1 each | 3 rows + `XMAS_FIDELITY.md` |
@@ -111,12 +116,13 @@ is single-GPU except T13 (2 GPUs) and T8 (4–8 GPUs). Gates, tolerances and com
 | 11 | **13B transfer, seed 17:** Uniform, DataTailor, COINCIDE at 5% and 10%; then VisNec/ICONS/XMAS/CoIDO 10% | T13 | P10 | 2 per run | rows + checkpoints |
 | 12 | Full-data reference (660,763 records, 5,162 steps, seed 17; multi-GPU allowed, global batch 128) + evaluation | T8 | P4 + manager ownership/live-continuation reconciliation; then ≥4 free GPUs | 4–8 | step 5,162; row |
 | 13 | Seeds 29 and 43 for the P6–P9 cells (10% first) | T12, T4, T9, T10 | P6–P9 | 1 each | rows |
-| 14 | Retry the 16 failed T5 extended gaps (after P4), then Uniform 20% t29 | T5, T2 | P4 | 1 each | rows |
+| 14 | Retry still-missing, non-15% T5 banks after diagnosis, then Uniform 20% t29; skip completed banks | T5, T2 | P4 | 1 each | rows |
 | 15 | *(optional)* Faithful LESS 10% t17; PreSel-adapted plan (approval first) | T6, T11 | P4 | 1 each | rows + fidelity notes |
 | — | ~~DataTailor 15% t17 (T3), source-sqrt 5/20% (T7)~~ — dropped 2026-11-13 | — | — | — | — |
 | 16 | Hand-back: `results/coauthor/*`, fidelity notes, HF uploads, pull request | — | everything above that ran | 0 | PR opened |
 
-Continuously: evaluate every new checkpoint (core four, then extended eight) as soon as it finishes; log every attempt
+Continuously: evaluate every new checkpoint (core four, then the six local extended metrics; judged banks deferred)
+as soon as it finishes; log every attempt
 (including failures and GPU-hours) in `RUN_LOG.md` the moment it ends. A failed run is retried once as a new attempt
 after diagnosing the cause; a second failure → stop that item and ask.
 

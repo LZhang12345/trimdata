@@ -1,6 +1,7 @@
 {
  "schema": "trimdata-agent-contract-v2",
  "contract_doc": "AGENT_CONTRACT.md",
+ "current_execution_brief": "docs/COAUTHOR_NEXT_WAVE_20261113.md",
  "precedence": [
   "AGENT_CONTRACT.md",
   "README.md",
@@ -29,7 +30,9 @@
   ],
   "base_models": {
    "lmsys/vicuna-7b-v1.5": "3321f76e3f527bd14065daf69dad9344000a201d",
+   "lmsys/vicuna-13b-v1.5": "c8327bf999adbd2efe2e75f6509fa01436100dc2",
    "openai/clip-vit-large-patch14-336": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+   "liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-13b-v1.5": "e362f049527e677c163c89a4449c780256e4beb8",
    "liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-7b-v1.5": "5414da88308e4287a29f2e9609256458afb0a981"
   },
   "training_data": {
@@ -118,7 +121,7 @@
     43
    ]
   },
-  "gpu_layout": "one single-GPU run per GPU; multi-GPU only for T8 with per_device*accum*world == 128",
+  "gpu_layout": "7B students: one GPU, batch 4 x accumulation 32; multi-GPU allowed only for T8 and T13. T13: 2 GPUs, batch 4 x accumulation 16 x world 2 = 128, gated on T0d. T8: global batch 128, ownership-gated",
   "natural_steps": {
    "b05": 258,
    "b10": 516,
@@ -268,7 +271,10 @@
     "extended parts of T1/T5 and new rows"
    ],
    "T0b": [
-    "all training tasks"
+    "7B student tasks only"
+   ],
+   "T0d": [
+    "T13 production students (not its own calibration retrain)"
    ]
   },
   "on_fail": "stop dependent tasks; write CALIBRATION_REPORT.md",
@@ -279,11 +285,13 @@
    "id": "T0",
    "required": true,
    "action": "calibrate",
+   "execution_note": "Verify and reuse compatible T0a/T0b/T0c-local PASS receipts already reported; do not repeat. T0c-judged deferred",
    "gpu_h": "~25"
   },
   {
    "id": "T1",
    "required": true,
+   "execution_note": "Core four for t29/t43 already reported complete; reconcile per-bank results and evaluate only missing non-deferred banks",
    "depends_on": [
     "T0a",
     "T0c"
@@ -367,7 +375,9 @@
     "T0a",
     "T0c"
    ],
-   "action": "evaluate extended8",
+   "action": "evaluate missing local extended banks only; judged banks deferred",
+   "historical_list_date": "2026-11-11",
+   "execution_note": "The lists below are historical, not a ready queue. Skip all b15 cells and all completed banks; diagnose failures before retries",
    "cells_missing_all8": [
     "coincide/b05/selfixed-t29",
     "coincide/b05/selfixed-t43",
@@ -396,7 +406,7 @@
     "uniform/b10/sel1235-t43",
     "uniform/b10/sel1236-t43"
    ],
-   "plus": "every new checkpoint from T2-T4, T8-T10",
+   "plus": "every new checkpoint from T2, T4, T8, T9, T10, T12 and T13 with the appropriate scale/calibration gates",
    "gpu_h": "~3 per checkpoint"
   },
   {
@@ -417,7 +427,7 @@
     "released_selection": "HF dataset aaakiyasuqqqa/VisNec: llava_v1.5-7b-top15.json"
    },
    "scoring": "scripts/cal_visnec.py exactly as scripts/cal_visnec.sh, on the 660,763 eligible records",
-   "selection": "scripts/task_distribution.py unchanged except paths and TOP_RATIO=0.10; keep realised K (no top-up); deterministic",
+   "selection": "scripts/task_distribution.py unchanged except paths and TOP_RATIO=0.10/0.05/0.20 for the approved budgets; keep realised K (no top-up); deterministic; qualify native budget support",
    "fidelity_check": "TOP_RATIO=0.15 on full llava_v1_5_mix665k.json vs released llava_v1.5-7b-top15.json overlap; stop and ask if far below ~90%",
    "budgets_seeds": {
     "b10": [
@@ -434,7 +444,7 @@
      43
     ]
    },
-   "label": "VisNec (disclose eligible-pool restriction and 10% ratio); other deviations -> VisNec-adapted",
+   "label": "VisNec (disclose eligible-pool restriction and actual budget ratio); other deviations -> VisNec-adapted",
    "fidelity_note": "VISNEC_FIDELITY.md",
    "gpu_h": "~80-160"
   },
@@ -520,6 +530,7 @@
   {
    "id": "T8",
    "required": true,
+   "execution_note": "Blocked until manager ownership and live/accepted continuation are reconciled; do not duplicate a trajectory",
    "depends_on": [
     "T0b"
    ],
@@ -540,6 +551,7 @@
    },
    "action": "select+train+evaluate",
    "method": "LESS (faithful)",
+   "execution_note": "Optional later work; seed 17 first, seeds 29/43 later under coverage-first policy",
    "pin": {
     "repo": "princeton-nlp/LESS",
     "commit": "8abf9628b9a814ac3045445eebc8ba3c908fdc78"
@@ -609,8 +621,10 @@
    "action": "train+evaluate",
    "method": "LLaVA-1.5-13B transfer of baseline selections",
    "depends_on": {
-    "gate": "T0d"
+    "gate": "T0d",
+    "inputs": "each exact selected set and model-specific verified assets"
    },
+   "execution_note": "No T13 production before T0d PASS. T0d calibration retrain is permitted qualification work and counts once as Uniform b05 sel1235 t17",
    "base_model": {
     "vicuna": "lmsys/vicuna-13b-v1.5@c8327bf999adbd2efe2e75f6509fa01436100dc2",
     "projector": "liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-13b-v1.5@e362f049527e677c163c89a4449c780256e4beb8"
@@ -648,7 +662,7 @@
   "T11"
  ],
  "outputs": {
-  "results_csv": "results/coauthor/RESULTS.csv (columns of results/RESULTS_TEMPLATE.csv; one row per cell + one per failed attempt)",
+  "results_csv": "results/coauthor/RESULTS.csv (existing template columns; cell key includes base model, method, budget and both seeds; new rows must tag base_model=llava-1.5-7b or base_model=llava-1.5-13b in notes; historical untagged rows are 7B; one row per cell + one per failed attempt)",
   "run_log": "results/coauthor/RUN_LOG.md",
   "calibration": "results/coauthor/CALIBRATION_REPORT.md",
   "checkpoints": "own HF repo, layout <method>/<bNN>/<selXXXX|selfixed>-t<seed>/ with adapter, projector, configs, trainer_state.json, PORTABLE_RUN_SUMMARY.json, provenance.json, eval/ raw predictions",
@@ -671,7 +685,7 @@
   "committing tokens/API keys; re-hosting LLaVA-665K text or images"
  ],
  "sequence_doc": "AGENTS.md section 3a",
- "scheduling_rule": "when a GPU is free, start the highest-priority item whose dependencies are met; selection-side compute of T4/T9/T10 may run from day 0 without a gate",
+ "scheduling_rule": "Use AGENTS.md section 3a: highest-priority distinct ready work first, only owned available GPUs. Setup and diagnosis precede long GPU work. Existing PASS receipts may be reused when compatible. Blocked T13/T8 do not block unrelated work. Historical or cancelled task entries are not launch authorization",
  "project_lead_overrides": {
   "date": "2026-11-12",
   "deferred_benchmarks": [

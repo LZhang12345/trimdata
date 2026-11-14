@@ -4,6 +4,18 @@ The project lead approved this assignment. Work on the `run` branch, not `main`.
 The binding protocol is [AGENT_CONTRACT.md](../AGENT_CONTRACT.md), especially
 section 1a. The scheduler order is [AGENTS.md](../AGENTS.md), section 3a.
 
+## Agent entry points and precedence
+
+- Claude Code: root [CLAUDE.md](../CLAUDE.md) points here and to the shared rules.
+- Codex and other AGENTS-aware agents: root [AGENTS.md](../AGENTS.md) points here.
+- This assignment is agent/model-independent. If your client does not load either
+  entry file automatically, open them explicitly.
+- Authority: explicit project-lead instructions, then contract section 1a, then
+  the rest of the contract. This brief, the run order, JSON and README summarize
+  those rules; if an unresolved conflict remains, do not guess or launch that cell.
+- Priority is not a requirement to idle: choose the highest-priority ready cell,
+  after checking passed gates, unique ownership and actual GPU availability.
+
 ## Start now
 
 1. Fetch `origin/run`. Preserve local edits and reconcile them before pulling;
@@ -16,6 +28,9 @@ section 1a. The scheduler order is [AGENTS.md](../AGENTS.md), section 3a.
    runs. Correlation is not proof of hardware failure: inspect application and
    controller logs, driver/Xid evidence, memory and concurrent GPU ownership.
    Record the evidence, remedy and qualification. Do not disturb other workloads.
+   These instructions do not authorize a driver reset or killing other users'
+   processes. If access prevents diagnosis, record the exact blocker and seek
+   the instance owner's assistance; do not invent a cause.
 4. Implement and qualify faithful selection routes, starting with VisNec and
    its released-subset fidelity check, then ICONS, XMAS and CoIDO. Independent,
    ready preparation may proceed in parallel; no dummy GPU work or premature
@@ -45,6 +60,21 @@ These are missing cells relative to the audited `7bfc695` results, not permissio
 to ignore subsequent work. Check again immediately before launch. The primary
 roster has 12 new 7B students, 9 new 13B cells and one intentional calibration
 retrain. T8 is separate and ownership-gated.
+
+## Completion and handoff gates
+
+- A scientific cell is complete only with its exact selected-set identity, full
+  natural-epoch checkpoint, full-bank scores, raw predictions, provenance and
+  failed-inclusive costs. Missing extended banks remain explicitly incomplete.
+- A core-four result may be reported while extended banks remain pending; do not
+  relabel that as the entire evaluation suite completed.
+- The T0d reference is a pending delivery, not a currently available artifact.
+  Require its HF revision, checksums, training log/state, predictions and scores.
+  Its calibration retrain is allowed to establish the gate; it does not depend
+  on its own final PASS. Other T13 production cells do require that PASS.
+- If only 13B is blocked, continue qualified 7B work. If all work is blocked,
+  report exact attempted remedies and prerequisites instead of fabricating
+  completion or waiting without a status record.
 
 ## Invariants and exclusions
 
@@ -77,3 +107,7 @@ failed-inclusive measured costs. Distinguish copied scores from fresh evaluation
 and selected-set reuse from native selection. Update the coauthor results, run
 log, calibration report and instance status. Upload qualified weights only to HF,
 never Git. Do not claim preparation or a test PASS as a completed experiment.
+Group results by base model as well as method, budget and both seeds. Keep the
+existing CSV columns; every new row must identify `base_model=llava-1.5-7b` or
+`base_model=llava-1.5-13b` in `notes`. Historical untagged rows are 7B. Never
+overwrite a 7B row with a 13B result having the same method/budget/seeds.

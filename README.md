@@ -162,25 +162,24 @@ Extended suite (means as reported in our living results table; not recomputed fo
 | 20% | DataTailor (t17) | 1402.2 | 338.9 | 61.93 | 34.00 | 60.97 | 62.10 | 28.00 | 43.93 |
 
 ## Coauthor plan
+**Current assignment (2026-11-13): start with
+[`docs/COAUTHOR_NEXT_WAVE_20261113.md`](docs/COAUTHOR_NEXT_WAVE_20261113.md).**
 The authoritative task list, gates, tolerances, schedule for 8× A100 40GB and hand-back format are in
-[`AGENT_CONTRACT.md`](AGENT_CONTRACT.md) (machine-readable: [`agent_contract.json`](agent_contract.json)). Summary:
+[`AGENT_CONTRACT.md`](AGENT_CONTRACT.md), section 1a (machine-readable:
+[`agent_contract.json`](agent_contract.json)); scheduling order is [`AGENTS.md`](AGENTS.md) §3a.
 
 Project-lead update, 2026-11-12: defer LLaVA-W and MM-Vet judge experiments while continuing core-four
 and locally scored extended work. Deferred metrics remain blank.
 
 | ID | Task |
 |---|---|
-| T0 | Calibration: T0a re-evaluate `uniform/b10/sel1234-t17` and `datatailor/b10/sel1234-t17` (core four); T0c extended eight on `uniform/b10/sel1234-t17`; T0b retrain `uniform/b10/sel1235-t17` |
-| T1 | Evaluate COINCIDE 20% t29/t43 (core + extended); extended for t17 |
-| T2 | Train + evaluate Uniform 20% t29 |
-| T3 | Train + evaluate DataTailor 15% t17 |
-| T4 | Faithful ICONS: 10% × 3 seeds, then 5% and 20% |
-| T5 | Extended eight for the 24 provided checkpoints that lack it (listed in the contract) and all new checkpoints |
-| T12 | Faithful VisNec (required; closest prior art to our visual-necessity filter), 10% × 3 seeds |
-| T9 | Faithful XMAS, 10% × 3 seeds |
-| T10 | Faithful CoIDO, 10% × 3 seeds |
-| T8 | Full-data reference (660,763 records, 5,162 steps, seed 17) |
-| T6, T7, T11 (optional) | Faithful LESS 10%; source-sqrt 5%/20%; PreSel-adapted (approval first) |
+| T0 | Existing T0a/T0b/T0c-local passed; verify compatible receipts instead of repeating. T0c-judged deferred |
+| T12, T4, T9, T10 | New VisNec, ICONS, XMAS, CoIDO coverage in that order; 10%, 5%, 20%, training seed 17 first |
+| T0d, T13 | Gated 13B calibration, then baseline selected-set transfer (5%/10% existing methods; 10% new methods) |
+| T8 | Full-data reference only after manager ownership/live-continuation reconciliation |
+| T1, T5, T2 | Lower-priority remaining evaluations and Uniform 20% t29; skip already complete banks/cells |
+| T3, T7 | Cancelled/dropped; no new 15% jobs or source-sqrt 5%/20% jobs |
+| T6, T11 (optional, later) | Faithful LESS 10% seed 17; PreSel adaptation proposal requires approval |
 
 ## Checkpoint index
 Every folder has `provenance.json` (source run, file sha256, steps, K, selection reference, core-four scores and the
