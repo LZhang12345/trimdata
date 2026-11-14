@@ -192,20 +192,28 @@ coverage. Missing T0d or full-data ownership clearance does not block unrelated 
     (1.0961, 1.0100, 0.8531, 0.8942, 0.8452, 0.9459). Two consecutive deviations → stop and diagnose.
   * **Final:** global step 516; core average within ±0.30 of 65.22 (84.56 / 55.45 / 53.77 / 67.08); no bank off by
     more than ±1.0.
-* **T0d — 13B calibration** (unlocks T13 students; added 2026-11-13). We provide one 13B reference trained on one L40S
-  with the same recipe: LLaVA-1.5-13B on `selections/uniform/b05/sel1235`, seed 17, 258 steps (checkpoint, `trainer_state.json`
-  and core-four scores will be added to the HF checkpoint repo under `13b/uniform/b05/sel1235-t17/`; until then T0d waits).
-  (a) Evaluation: re-evaluate the provided 13B checkpoint with §3.6 (`--model-base` = Vicuna-13B); pass as T0a (avg ±0.10,
-  every bank ±0.30). (b) Training: retrain the same cell with the 2-GPU T13 layout; losses at steps 10–60 within ±0.05 of the
-  reference `trainer_state.json`; final core average within ±0.50, no bank off by more than ±1.0. Record peak memory per GPU.
-  If the 2-GPU layout does not reproduce, **stop and ask** (do not change per-device batch or accumulation on your own).
-  A passing T0d (b) retrain is also the T13 row for `uniform/b05/sel1235` seed 17 (do not train it twice).
-  T0d's evaluation and calibration retrain are permitted qualification work once their inputs and device readiness
-  are verified; they do not depend on their own final PASS. Other T13 production cells do depend on that PASS.
-  At this handover, the reference is pending delivery: require an exact HF revision, checkpoint checksums,
-  `trainer_state.json`, raw predictions and score manifest before starting. Do not mistake the future path for
-  an uploaded artifact. Frozen multi-GPU calibration tolerances may fail because the sampler/order differs;
-  that is a diagnosis requirement, not permission to relax the thresholds after observing results.
+* **T0d — 13B calibration** (unlocks T13 students; added 2026-11-13; **revised 2026-11-14: retrain-only**).
+  The project lead decided **not to upload** the 13B reference checkpoint. Do not wait for, or search for, files
+  under `13b/uniform/b05/sel1235-t17/` on HF. The former check (a), re-evaluating our checkpoint, is withdrawn.
+  T0d is now only the calibration retrain against the published reference numbers below.
+  **Reference (Babel, one L40S, single GPU, 4 x 32 x 1 = global batch 128):** LLaVA-1.5-13B assembled from the §2
+  pins, trained on `selections/uniform/b05/sel1235` (K=33,032; records SHA256
+  `c0b81ac856e5a0575ccfbf7370d39e5e9ff67a9615e21f0d389d7f1e2871c811`, the same file you already hold),
+  training seed 17, 258 optimizer steps, same recipe (LoRA 128/256, fp16, ZeRO-3, LR 2e-4 / projector 2e-5, cosine,
+  warmup 0.03). Reference `trainer_state.json` SHA256 `8080da6c5600c53d43154395d6d4427774b12495bf903155e70d3f14cc5a1a0b`.
+  * Logged training loss at steps 10/20/30/40/50/60: **1.1218, 0.9295, 0.7892, 0.9054, 0.7506, 0.6887**.
+    Learning rate at step 10: 0.000199968 (cosine, 258-step horizon).
+  * Core-four scores from the shared `scripts/eval_portable.py` (§3.6; eager attention, unmerged LoRA, fp16, greedy;
+    full banks): POPE **85.7576**, GQA **53.82**, TextVQA **55.73**, ScienceQA-IMG **68.5672**; average **65.9687**.
+  **Pass:** retrain the same cell with the 2-GPU T13 layout (4 x 16 x 2 = 128); losses at steps 10–60 within ±0.05
+  of the values above; final step 258; final core average within ±0.50 of 65.9687; no bank off by more than ±1.0.
+  Record peak memory per GPU. If the 2-GPU layout does not reproduce, **stop and ask** (do not change per-device
+  batch or accumulation on your own). Because no cross-hardware evaluation of our checkpoint is performed, a
+  failure cannot by itself separate training from evaluation differences: report per-bank deltas and diagnose,
+  do not relax thresholds after seeing results.
+  A passing T0d retrain is also the T13 row for `uniform/b05/sel1235` seed 17 (do not train it twice). The
+  retrain is permitted qualification work once inputs and device readiness are verified; it does not depend on
+  its own final PASS. Other T13 production cells do depend on that PASS.
 * On any gate failure: **stop** the dependent tasks and report the deltas, environment (`pip freeze`), GPU/driver and
   logs in `CALIBRATION_REPORT.md`. Tasks whose gate passed may continue.
 

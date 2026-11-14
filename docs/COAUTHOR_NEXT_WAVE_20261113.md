@@ -49,7 +49,7 @@ ready cells.
 | 2 | ICONS | 7B | 10%, then 5%, then 20% | 3 | New; warm-up is not a finished student |
 | 3 | XMAS | 7B | 10%, then 5%, then 20% | 3 | New; preserve disclosed release fixes |
 | 4 | CoIDO | 7B | 10%, then 5%, then 20% | 3 | New; prescribed quality judge still required |
-| Gate | T0d: evaluate our 13B reference and retrain that exact cell | 13B | Uniform 5%, selection seed 1235 | 1 | Intentional calibration repeat; counts as the T13 Uniform 5% row |
+| Gate | T0d: retrain that exact cell and compare with our published reference losses/scores (revised 2026-11-14: no checkpoint upload) | 13B | Uniform 5%, selection seed 1235 | 1 | Calibration retrain; counts as the T13 Uniform 5% row |
 | 5 | Uniform | 13B | 10%, selection seed 1234 | 1 | New; T0d must pass |
 | 6 | DataTailor | 13B | 5%, 10%, selection seed 1234 | 2 | New training-model transfer; T0d must pass |
 | 7 | COINCIDE (existing adaptation label) | 13B | 5% fixed selection, 10% selection seed 1234 | 2 | New training-model transfer; T0d must pass |
@@ -68,10 +68,11 @@ retrain. T8 is separate and ownership-gated.
   failed-inclusive costs. Missing extended banks remain explicitly incomplete.
 - A core-four result may be reported while extended banks remain pending; do not
   relabel that as the entire evaluation suite completed.
-- The T0d reference is a pending delivery, not a currently available artifact.
-  Require its HF revision, checksums, training log/state, predictions and scores.
-  Its calibration retrain is allowed to establish the gate; it does not depend
-  on its own final PASS. Other T13 production cells do require that PASS.
+- Revised 2026-11-14: the 13B reference checkpoint will **not** be uploaded.
+  T0d is a retrain-only gate against the reference losses and core-four scores
+  now written in `AGENT_CONTRACT.md` §5. It is ready once inputs and devices are
+  verified. The retrain does not depend on its own final PASS; other T13
+  production cells do require that PASS.
 - If only 13B is blocked, continue qualified 7B work. If all work is blocked,
   report exact attempted remedies and prerequisites instead of fabricating
   completion or waiting without a status record.
@@ -96,7 +97,7 @@ retrain. T8 is separate and ownership-gated.
   projector. Never initialize from instruction-tuned `liuhaotian/llava-v1.5-13b`.
 - The authorized two-A100 layout (4 x 16 x 2 = global batch 128) is not yet
   qualified. L40S reserved memory alone does not prove single-A100 impossibility.
-  T13 waits for the reference checkpoint, scores and passing T0d; continue ready
+  T13 waits for a passing retrain-only T0d (contract §5); continue ready
   7B work meanwhile. Do not silently relax the gate or change the recipe.
 
 ## Hand-back

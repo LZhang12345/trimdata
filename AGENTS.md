@@ -112,7 +112,7 @@ is single-GPU except T13 (2 GPUs) and T8 (4–8 GPUs). Gates, tolerances and com
 | 7 | ICONS 10%, 5%, 20% t17 + evaluation | T4 | P4, ICONS selections | 1 each | 3 rows + `ICONS_FIDELITY.md` |
 | 8 | XMAS 10%, 5%, 20% t17 + evaluation | T9 | P4, XMAS selections | 1 each | 3 rows + `XMAS_FIDELITY.md` |
 | 9 | CoIDO 10%, 5%, 20% t17 + evaluation | T10 | P4, CoIDO selections | 1 each | 3 rows + `COIDO_FIDELITY.md` |
-| 10 | **T0d 13B calibration** (as soon as we post the 13B reference; see contract §5) | T0d | 13B reference on HF | 1 (eval) + 2 (retrain) | (a) and (b) pass |
+| 10 | **T0d 13B calibration — retrain only** (revised 2026-11-14; no HF checkpoint will be posted; see contract §5) | T0d | `selections/uniform/b05/sel1235`, 13B pins, reference losses/scores in contract §5 | 2 (retrain) | losses, average and banks within §5 tolerances |
 | 11 | **13B transfer, seed 17:** Uniform, DataTailor, COINCIDE at 5% and 10%; then VisNec/ICONS/XMAS/CoIDO 10% | T13 | P10 | 2 per run | rows + checkpoints |
 | 12 | Full-data reference (660,763 records, 5,162 steps, seed 17; multi-GPU allowed, global batch 128) + evaluation | T8 | P4 + manager ownership/live-continuation reconciliation; then ≥4 free GPUs | 4–8 | step 5,162; row |
 | 13 | Seeds 29 and 43 for the P6–P9 cells (10% first) | T12, T4, T9, T10 | P6–P9 | 1 each | rows |
