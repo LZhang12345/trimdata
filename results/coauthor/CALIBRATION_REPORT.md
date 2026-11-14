@@ -180,3 +180,61 @@ additional generation work is included in the measured evaluation cost.
 - T0c judged: deferred by the project lead (LLaVA-W, MM-Vet).
 
 No deferred metric is reported as passed or assigned an invented score.
+
+## Post-calibration continuation diagnosis, November 14
+
+Calibration gates remain passed. Subsequent failures were in execution:
+twelve extended attempts and T2 exhausted shared GPUs during overlapping
+model loads; T3 and four extended attempts failed during the kernel-recorded
+Fabric Manager shutdown and channel recovery at 06:27:02 UTC on November 13.
+
+The continuation adds atomic OS GPU leases inherited by model subprocesses
+and corrects readiness for the calibration retrain's `passed` status. Six
+CPU regressions passed locally and in the native environment. Fabric Manager
+is active; native fp16 cuBLAS and CUTLASS forward/backward health checks passed
+on all six then-empty GPUs, consuming 0.024368 diagnostic GPU-hours.
+Evidence is in `provenance/cuda-failure-kernel-diagnosis-20261114.json`,
+`provenance/CUDA_HEALTH_PASSED_20261114.json` and
+`provenance/resume-diagnosis-20261114.json`.
+
+Portable student training, data, precision, optimizer settings, natural steps,
+generation and scoring protocols are unchanged. Completed results are kept;
+failed items are retried once in fresh directories after diagnosis.
+
+## November 14 coverage-first continuation
+
+`origin/run` was fast-forwarded to `8835b43` while preserving prior local
+edits. T0a/T0b/local-T0c receipts are reused; no protocol or tolerance changed.
+The amended scheduler excludes T3 and all 15% jobs and adopts existing
+distinct non-15% workers. Seven ownership/readiness/retry/queue tests and
+the 7B/13B row-preservation regression passed in the native environment.
+
+VisNec's release identity, MiniLM/private environment and assembled stage-1
+configuration passed CPU qualification only; no scoring, selection or
+numerical fidelity PASS is claimed. Full-pool work still lacks the original
+OCR image. This does not block T2: its selected images passed hash preflight,
+and its unchanged trainer passed the step-1 LR check on GPU7.
+
+T0d remains independently blocked. At 04:10 UTC on November 14, the current
+HF checkpoint revision `ec9d98a2b071f2873889ad7f6e6dc66a02c481e6` contained
+no files at the promised `13b/uniform/b05/sel1235-t17/` reference path.
+Neither production 13B nor an unqualified multi-GPU calibration was launched.
+New 13B rows must preserve model identity and cannot replace 7B rows.
+
+## November 14 status refresh, 19:32 UTC
+
+The fresh T0b student's six local extended evaluations completed at
+09:09:57 UTC: MME-P 1327.941377, MME-C 307.857143, SEED-img 59.87,
+MMMU 35.777778, MMBench 56.972789, VizWiz 41.90. Its VizWiz unanswerable
+prediction rate is 0.258375 and this suite consumed 3.122509 GPU-hours.
+These are reporting results for the retrained student, not a repeat of
+the T0c calibration gate.
+
+All seven newly completed evaluation receipts passed full ordered
+question/prompt checks and prediction SHA validation. Existing calibration
+gates remain unchanged. T2 is still training at step 890/1,032; its
+optimizer-group checks at steps 1/10/100 passed, with 32.3 GiB peak memory
+on an A100 40GB. No final training or evaluation result is claimed.
+
+T0d's reference path remained empty at the same pinned HF revision when
+checked at 19:32 UTC. Evidence: `provenance/status-refresh-20261114T1931Z.json`.

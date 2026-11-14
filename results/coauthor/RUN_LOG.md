@@ -341,3 +341,158 @@ number of allocated GPUs, divided by 3,600. Setup and read-only checks use zero 
 - Scheduling reservations and passed-calibration readiness need correction before retries; correlated 06:27 CUDA failures need diagnosis. No retries launched during this update.
 - Updated continuation plan, instance status, calibration report and preparation-only VISNEC_FIDELITY.md. Evidence: provenance/contract-update-20261113.json and provenance/status-20261113.json.
 - Administrative update GPU-hours: 0; prior attempt costs retained unchanged in RESULTS.csv.
+
+## 2026-11-14T00:32:55.641034+00:00 — Pre-retry CUDA health diagnostic
+
+- Status: passed; GPUs: [0, 1, 2, 3, 4, 5]; diagnostic GPU-hours: 0.024368.
+- Native six-test ownership/readiness suite passed. Fabric Manager is active. Native fp16 cuBLAS and CUTLASS forward/backward probes run only on empty, leased GPUs; other projects remain untouched.
+- Evidence: control/CUDA_HEALTH_PASSED_20261114.json and per-GPU logs; diagnostic costs are separate from prior scientific attempt costs.
+
+## 2026-11-14T00:33:36.365366+00:00 — Diagnosed campaign continuation
+
+- Diagnosed 18 first scientific failures: 13 GPU contention errors and 5 Fabric Manager interruption errors. Attempt evidence and costs retained. Each gets only its permitted fresh retry; completed cells are skipped.
+- Native six-test concurrency, inherited-ownership, readiness and retry-limit suite passed; six empty-GPU fp16 cuBLAS/CUTLASS health probes passed. No other project process was changed.
+- Retired idle extended controller PID 1734994; corrected passed-calibration readiness and added OS GPU locks inherited by generation/training subprocesses. Portable trainer, student recipe, data and scorers remain unchanged.
+- New controller PID 2342767: ['/opt/dlami/nvme/trimdata-work/envs/native/bin/python', '/home/ubuntu/trimdata/scripts/coauthor_resume_campaign.py', '--work-root', '/opt/dlami/nvme/trimdata-work', '--code-commit', '3ecf666+workingtree-eager-fix-atomic-gpu-leases', '--controller-attempt', '1']; log: /opt/dlami/nvme/trimdata-work/logs/resume-campaign-controller-a1.log. Dispatch order: remaining P5/P6 evaluation gaps, then P7/P8 training and each new full evaluation.
+- Controller startup GPU-hours: 0. Child attempt manifests and completed rows account for compute; a second scientific failure stops that item.
+
+## 2026-11-14T03:22:30.075078+00:00 — T1/T5 datatailor/b05/sel1234-t43 local extended attempt 2
+
+- Status: completed; GPU 5; 2.791817 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/datatailor-b05-sel1234-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T03:24:26.829079+00:00 — T1/T5 coincide/b05/selfixed-t29 local extended attempt 2
+
+- Status: completed; GPU 0; 2.812686 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/coincide-b05-selfixed-t29-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T03:27:09.440608+00:00 — T1/T5 coincide/b20/selfixed-t29 local extended attempt 2
+
+- Status: completed; GPU 3; 2.857880 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/coincide-b20-selfixed-t29-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T03:27:26.680473+00:00 — T1/T5 coincide/b20/selfixed-t43 local extended attempt 2
+
+- Status: completed; GPU 2; 2.862627 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/coincide-b20-selfixed-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T03:29:41.388827+00:00 — T1/T5 datatailor/b05/sel1234-t29 local extended attempt 2
+
+- Status: completed; GPU 6; 2.816079 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/datatailor-b05-sel1234-t29-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T03:34:37.923635+00:00 — T1/T5 coincide/b20/selfixed-t17 local extended attempt 2
+
+- Status: completed; GPU 4; 2.808354 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/coincide-b20-selfixed-t17-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T03:38:51.412472+00:00 — T1/T5 less_approx/b10/sel1234-t29 local extended attempt 2
+
+- Status: completed; GPU 1; 2.890236 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/less_approx-b10-sel1234-t29-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T04:00:51.556976+00:00 — T1/T5 uniform/b15/sel1235-t29 local extended attempt 2
+
+- Status: failed; GPU 1; 0.537711 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform-b15-sel1235-t29-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T04:00:51.584148+00:00 — Incorporate origin/run 8835b43
+
+- Local run fast-forwarded from 7bfc695 with all 67 prior changed/untracked file hashes preserved. Root instructions, current execution brief and binding contract read in order.
+- Retired obsolete dispatcher PID 2342767; retained distinct active non-15% workers. Cancelled owned generation for Uniform b15 t29/t43 with cost finalization by their wrappers; no T3 retry launched.
+- New 7B seed-17 coverage has priority; 13B reference/T0d and full-data ownership remain independent gates. Existing CUDA diagnosis and native qualification reused.
+
+## 2026-11-14T04:00:51.584649+00:00 — T1/T5 uniform/b15/sel1235-t43 local extended attempt 2
+
+- Status: failed; GPU 6; 0.498634 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform-b15-sel1235-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T04:06:27.111109+00:00 — Distinct ready continuation after 8835b43
+
+- Started CPU-only VisNec release/model/environment qualification and independent XMAS proxy asset staging; no selector or student result claimed.
+- Seven native ownership/readiness/retry/queue checks passed. New lower-priority dispatcher adopts existing distinct non-15% workers; T3 and every b15 item excluded. New-row model tags are 7B; 13B never launched or used for row replacement.
+- Original-image archive mirror rejected on byte mismatch against an original download; no image installed or training record changed. 0 GPU-hours.
+- T0d awaits exact reference delivery; T8 awaits manager ownership clearance. New 7B students await full selector prerequisites; those blockers do not stall unrelated ready cells.
+
+## 2026-11-14T04:12:22.102229+00:00 — T1/T5 datatailor/b20/sel1234-t43 local extended attempt 2
+
+- Status: completed; GPU 7; 2.932015 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/datatailor-b20-sel1234-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T04:17:23.809281+00:00 — New 7B selector input qualification
+
+- VisNec upstream commit d894598ef9ba3e03da847a47464185c6262d230f verified in a separate clean checkout. Release SHA75f200c4623ede25671beeeeb1574216eb7cb2ab7d0d5ba78a7a6f734327ddf2 and MiniLM Hub objects verified. All 99,785 reference conversations match original uniquely. This is input qualification, not reproduced top-15 overlap.
+- Private VisNec environment passed CPU imports/embedding/clustering; native pins unchanged. Assembled the declared stage-1 model from unchanged pinned shards; unchanged initializer existing-tower branch and exact projector weights passed on CPU. No added vision-tower CLI setting or source patch.
+- XMAS proxy revision 2f275b1127d59fc31e4f7c7426d528768ada9ea4 staged; all ten objects verified. Proxy environment/layout/trajectories not yet qualified.
+- Full-original image audit: only ocr_vqa/images/689852649.jpg missing. Byte-different archive mirror rejected; no training image installed or record removed.
+- 13B reference checked at current HF revision ec9d98a2b071f2873889ad7f6e6dc66a02c481e6: zero promised-path files; T0d blocked independently. T8 ownership remains unqualified.
+- Eight CPU scheduling/reporting regressions passed natively. Preparation and administrative GPU-hours: 0. No new selected set, student or numerical fidelity PASS produced.
+- Commands, file hashes and exact manifests: control/next-wave-execution-provenance-20261114.json; selector preparation, stage1 assembly/CPU qualification, mirror qualification and T0D reference status receipts.
+
+## 2026-11-14T04:23:50.540319+00:00 — Final live reconciliation for 8835b43
+
+- Seven distinct extended evaluations active; Uniform b20 sel1235-t29 retry 2 training on physical GPU7 (wrapper 2412740, model 2413746). Step-1 three-group LR check passed with required projector/LoRA ratio 0.1.
+- 16/24 historical extended gaps filled; two b15 retries cancelled with measured costs retained; six permitted historical gaps still active plus fresh calibration-student extended evaluation. No new selector student or 13B run launched.
+- Instance status, amended continuation plan, fidelity notes and calibration report synchronized. Prior local run-log additions retained verbatim when merged. No stale local result CSV/log pushed to the instance.
+- Administrative GPU-hours: 0. Running child manifests continue to measure allocated time and finalize scientific attempt costs.
+
+## 2026-11-14T06:33:31.788924+00:00 — T1/T5 less_approx/b10/sel1234-t43 local extended attempt 2
+
+- Status: completed; GPU 4; 3.014367 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/less_approx-b10-sel1234-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T06:33:40.568907+00:00 — T1/T5 uniform/b05/sel1235-t43 local extended attempt 2
+
+- Status: completed; GPU 2; 2.769367 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform-b05-sel1235-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T07:11:53.172152+00:00 — T1/T5 uniform/b20/sel1235-t43 local extended attempt 2
+
+- Status: completed; GPU 5; 3.074543 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform-b20-sel1235-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T07:36:56.075667+00:00 — T1/T5 uniform/b05/sel1235-t29 local extended attempt 2
+
+- Status: completed; GPU 3; 2.773942 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform-b05-sel1235-t29-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T08:35:04.070626+00:00 — T1/T5 uniform_scored_random/b10/sel1234-t43 local extended attempt 2
+
+- Status: completed; GPU 4; 3.981140 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform_scored_random-b10-sel1234-t43-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T08:45:05.334499+00:00 — T1/T5 uniform_scored_random/b10/sel1234-t29 local extended attempt 2
+
+- Status: completed; GPU 5; 2.816803 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform_scored_random-b10-sel1234-t29-extended-a2/ATTEMPT.json`.
+
+## 2026-11-14T09:09:57.239120+00:00 — T1/T5 uniform/b10/sel1235-t17 local extended attempt 1
+
+- Status: completed; GPU 6; 3.122509 GPU-hours.
+- Banks: mme-perception, mme-cognition, seed-image, mmmu-val, mmbench-en-dev, vizwiz-test. Judges deferred.
+- Commands, scores, hashes and errors: `/opt/dlami/nvme/trimdata-work/runs/uniform-b10-sel1235-t17-extended-a1/ATTEMPT.json`.
+
+## 2026-11-14T19:32:38.370680+00:00 — live status and result reconciliation
+
+- All seven previously active local extended evaluations completed successfully; seven new completion receipts passed full ordered question/prompt validation and prediction SHA checks.
+- Historical extended gaps: 22/24 completed; the two Uniform 15% gaps are excluded under 8835b43. The already completed DataTailor 15% evaluation is retained as history.
+- T2 Uniform 20% sel1235-t29 remains training at step 890/1,032; core and local extended evaluation remain queued. Optimizer-group checks at steps 1/10/100 are present. No extra attempt launched.
+- CSV: 50 rows, 25 successful cells, 25 failed/setup/cancelled attempts. Added explicit 7B tags to 5 historical worker rows without altering scores or costs.
+- Original OCR image still absent; HF 13B reference path still empty at revision `ec9d98a2b071f2873889ad7f6e6dc66a02c481e6`. New-selector prerequisites and full-data ownership clearance remain outstanding. Benchmark judges remain deferred.
+- Snapshot: `/opt/dlami/nvme/trimdata-work/control/status-refresh-20261114T1931Z/status.json`.
