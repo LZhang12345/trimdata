@@ -271,7 +271,8 @@
     "all training tasks"
    ]
   },
-  "on_fail": "stop dependent tasks; write CALIBRATION_REPORT.md"
+  "on_fail": "stop dependent tasks; write CALIBRATION_REPORT.md",
+  "T0d": "13B calibration: provided 13B reference uniform/b05/sel1235-t17 (L40S). (a) eval as T0a; (b) 2-GPU retrain: losses steps 10-60 within 0.05, final avg within 0.50, banks within 1.0"
  },
  "tasks": [
   {
@@ -314,7 +315,7 @@
   },
   {
    "id": "T3",
-   "required": true,
+   "required": false,
    "depends_on": [
     "T0b"
    ],
@@ -323,7 +324,8 @@
    "selection": "selections/datatailor/b15/sel1234",
    "K": 99108,
    "steps": 774,
-   "gpu_h": "~20"
+   "gpu_h": "~20",
+   "status": "cancelled 2026-11-13 (15% dropped)"
   },
   {
    "id": "T4",
@@ -342,22 +344,18 @@
    },
    "budgets_seeds": {
     "b10": [
-     17,
+     17
+    ],
+    "b05": [
+     17
+    ],
+    "b20": [
+     17
+    ],
+    "later_seeds": [
      29,
      43
-    ],
-    "then": {
-     "b05": [
-      17,
-      29,
-      43
-     ],
-     "b20": [
-      17,
-      29,
-      43
-     ]
-    }
+    ]
    },
    "fidelity_note": "ICONS_FIDELITY.md",
    "gpu_h": "~150-250"
@@ -423,7 +421,15 @@
    "fidelity_check": "TOP_RATIO=0.15 on full llava_v1_5_mix665k.json vs released llava_v1.5-7b-top15.json overlap; stop and ask if far below ~90%",
    "budgets_seeds": {
     "b10": [
-     17,
+     17
+    ],
+    "b05": [
+     17
+    ],
+    "b20": [
+     17
+    ],
+    "later_seeds": [
      29,
      43
     ]
@@ -451,7 +457,15 @@
    },
    "budgets_seeds": {
     "b10": [
-     17,
+     17
+    ],
+    "b05": [
+     17
+    ],
+    "b20": [
+     17
+    ],
+    "later_seeds": [
      29,
      43
     ]
@@ -482,7 +496,15 @@
    },
    "budgets_seeds": {
     "b10": [
-     17,
+     17
+    ],
+    "b05": [
+     17
+    ],
+    "b20": [
+     17
+    ],
+    "later_seeds": [
      29,
      43
     ]
@@ -554,7 +576,8 @@
      43
     ]
    },
-   "gpu_h": "~90"
+   "gpu_h": "~90",
+   "status": "dropped 2026-11-13"
   },
   {
    "id": "T11",
@@ -579,27 +602,50 @@
    },
    "fidelity_note": "PRESEL_FIDELITY.md",
    "gpu_h": "~100"
+  },
+  {
+   "id": "T13",
+   "required": true,
+   "action": "train+evaluate",
+   "method": "LLaVA-1.5-13B transfer of baseline selections",
+   "depends_on": {
+    "gate": "T0d"
+   },
+   "base_model": {
+    "vicuna": "lmsys/vicuna-13b-v1.5@c8327bf999adbd2efe2e75f6509fa01436100dc2",
+    "projector": "liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-13b-v1.5@e362f049527e677c163c89a4449c780256e4beb8"
+   },
+   "layout": "ZeRO-3, 2 GPUs, per-device 4 x accumulation 16 x world 2 = 128 (disclose)",
+   "cells_seed17": [
+    "uniform/b05/sel1235",
+    "uniform/b10/sel1234",
+    "datatailor/b05/sel1234",
+    "datatailor/b10/sel1234",
+    "coincide/b05/selfixed",
+    "coincide/b10/sel1234",
+    "visnec/b10",
+    "icons/b10",
+    "xmas/b10",
+    "coido/b10"
+   ],
+   "gpu_h": "~10 per 5% run, ~20 per 10% run + eval"
   }
  ],
  "priority_order": [
-  "T0",
-  "T1",
-  "T5",
-  "T2",
-  "T3",
-  "T4:b10",
+  "diagnose failures",
   "T12",
+  "T4",
   "T9",
   "T10",
-  "LEAD_CHECKPOINT",
+  "T0d",
+  "T13",
   "T8",
-  "T4:b05+b20",
-  "APPROVED_EXTRA_BUDGETS",
+  "seeds 29/43",
+  "T5 retries",
+  "T2",
   "T6",
-  "T7",
   "T11"
  ],
- "after_new_baselines_10pct": "report ICONS/VisNec/XMAS/CoIDO 10% results and ask the lead which get 5%/20% runs",
  "outputs": {
   "results_csv": "results/coauthor/RESULTS.csv (columns of results/RESULTS_TEMPLATE.csv; one row per cell + one per failed attempt)",
   "run_log": "results/coauthor/RUN_LOG.md",
@@ -632,5 +678,37 @@
    "MM-Vet"
   ],
   "instruction": "Skip judge experiments for now. Continue core-four and six locally scored extended metrics with their respective calibration gates. Deferred metrics remain blank; selector quality judges are not implicitly waived."
+ },
+ "amendment_20261113": {
+  "precedence": "Supersedes earlier task order/budgets/seeds where they conflict (AGENT_CONTRACT.md section 1a).",
+  "coverage_first": "seed 17 for every planned cell first; seeds 29/43 later; 1-2 seeds per cell acceptable, report counts",
+  "budgets": [
+   "b05",
+   "b10",
+   "b20"
+  ],
+  "dropped": [
+   "b15 (no new runs/retries)",
+   "T3",
+   "T7"
+  ],
+  "new_baselines_budgets_seeds": {
+   "b10": [
+    17
+   ],
+   "b05": [
+    17
+   ],
+   "b20": [
+    17
+   ],
+   "later": [
+    29,
+    43
+   ]
+  },
+  "removed_checkpoint": "P13 lead approval before 5%/20% removed",
+  "diagnose_first": "2026-11-13 04:23/06:27 UTC CUDA launch failure bursts must be diagnosed before retries",
+  "judge_deferral": "unchanged"
  }
 }

@@ -89,45 +89,39 @@ Download only what a task needs, e.g.
   5% Uniform/DataTailor/COINCIDE ×3; 15% Uniform ×3, DataTailor t29/t43; 20% DataTailor ×3, COINCIDE ×3, Uniform t17/t43.
 * **Evaluation outputs provided:** every evaluated checkpoint folder has `eval/core4/<bank>/PREDICTIONS.jsonl` and
   `SCORE.json`; 27 also have extended-suite predictions/scores (22 with all eight). Use them for calibration.
-* **Your tasks:** run them in the order of §3a below (contract tasks T0–T12).
+* **Your tasks:** run them in the order of §3a below (contract tasks T0–T13). **Plan amended 2026-11-13** — read `AGENT_CONTRACT.md` §1a first: coverage before seeds (seed 17 first), budgets 5/10/20% (15% dropped, T3 cancelled), new baselines go to all three budgets, and new task T13 = LLaVA-1.5-13B transfer.
+* **Done by 2026-11-13 (`results/coauthor/`):** T0a/T0b/T0c-local passed; T1 core for COINCIDE 20% t29/t43; 8 of 24 T5 gaps.
 * **Not yours:** the project's own method, the paper, any change of protocol.
 
 ## 3a. Run order (execute in this sequence)
 Scheduling rule: **whenever a GPU becomes free, start the highest-priority item in the queue below whose dependencies are
 met.** Never start an item before its gate passes. Items marked *[parallel]* may run alongside earlier items. Everything
-is single-GPU except P14. Gates, tolerances and commands are in `AGENT_CONTRACT.md` §4–§6.
+is single-GPU except T13 (2 GPUs) and T8 (4–8 GPUs). Gates, tolerances and commands are in `AGENT_CONTRACT.md` §4–§6.
 
 | P | Item | Contract task | Depends on | GPUs | Done when |
 |---|---|---|---|---|---|
-| 0 | Setup: environment (`env/requirements-native-env.txt`), pinned base models, LLaVA c121 clone, image folders, `records.json` rebuilds, `python tests/test_optimizer_group_lr.py`, `scripts/verify_sha256.py` | — | — | 0 | versions/hashes match; test prints RAISES then PASSES ×2 |
-| 1 | T0a evaluation calibration: core four on `uniform/b10/sel1234-t17` and `datatailor/b10/sel1234-t17` | T0 | P0 | 2 | both within tolerance |
-| 2 | T0b training calibration: retrain `uniform/b10/sel1235-t17` (516 steps) and evaluate | T0 | P0 | 1 | early loss check at steps 10–60 passes; final within tolerance |
-| 3 | T0c extended calibration: extended eight on `uniform/b10/sel1234-t17` | T0 | P0 (needs judge API key) | 1 | all eight within tolerance |
-| 4 | *[parallel]* Selection-side compute for ICONS → VisNec → XMAS → CoIDO (warm-ups, VisNec scores, proxy, gradients, features, scorer) with official code; produces the four 10% selections (+ the VisNec fidelity check) | T4, T12, T9, T10 | P0 only (no gate: these use each method's own procedure) | remaining GPUs (4) | `record_ids.json` + `selection_meta.json` for each method; K checked |
-| — | **STOP if P1, P2 or P3 fails** (write `CALIBRATION_REPORT.md`, ask the lead). Selection compute (P4) may continue. | | | | |
-| 5 | Evaluate COINCIDE 20% t29, t43 (core + extended); extended for t17 | T1 | P1, P3 | 1 each | 3 rows |
-| 6 | Extended eight for the 19 checkpoints missing all eight, then VizWiz for the 5 missing only VizWiz (list in contract §6) | T5 | P1, P3 | 1 each | 24 rows complete |
-| 7 | Train + evaluate Uniform 20% t29 (1,032 steps) | T2 | P2 | 1 | step 1,032; row |
-| 8 | Train + evaluate DataTailor 15% t17 (774 steps) | T3 | P2 | 1 | step 774; row |
-| 9 | ICONS 10% students t17, t29, t43 + core/extended evaluation | T4 | P2, ICONS selection from P4 | 3 | 3 rows + `ICONS_FIDELITY.md` |
-| 10 | **VisNec 10% students t17, t29, t43 + evaluation (required)** | T12 | P2, VisNec selection + fidelity check from P4 | 3 | 3 rows + `VISNEC_FIDELITY.md` |
-| 11 | XMAS 10% students t17, t29, t43 + evaluation | T9 | P2, XMAS selection from P4 | 3 | 3 rows + `XMAS_FIDELITY.md` |
-| 12 | CoIDO 10% students t17, t29, t43 + evaluation | T10 | P2, CoIDO selection from P4 | 3 | 3 rows + `COIDO_FIDELITY.md` |
-| 13 | **Checkpoint report to the lead:** 10% results of ICONS/VisNec/XMAS/CoIDO; ask which get 5%/20% runs (in addition to ICONS) | — | P9–P12 | 0 | lead's answer recorded in `RUN_LOG.md` |
-| 14 | Full-data reference (660,763 records, 5,162 steps, seed 17; multi-GPU allowed, global batch 128) + evaluation | T8 | P2; start when ≥4 GPUs are free together | 4–8 | step 5,162; row |
-| 15 | ICONS 5% and 20% (selections + 3 seeds each) + evaluation | T4 (part 2) | P9 | 1 each | 6 rows |
-| 16 | 5%/20% runs for VisNec/XMAS/CoIDO **only if the lead approved them in P13** | — | P13 | 1 each | rows |
-| 17 | *(optional)* Faithful LESS 10% × 3 seeds | T6 | P2 | 1 each | 3 rows + `LESS_FIDELITY.md` |
-| 18 | *(optional)* Source-sqrt 5% and 20% × 3 seeds | T7 | P2 | 1 each | 6 rows |
-| 19 | *(optional)* PreSel-adapted: write the adaptation plan, **wait for approval**, then 10% × 3 seeds | T11 | lead approval, P2 | 1 each | plan + 3 rows + `PRESEL_FIDELITY.md` |
-| 20 | Hand-back: `results/coauthor/*`, fidelity notes, HF uploads, pull request | — | everything above that ran | 0 | PR opened |
+| 0–3 | Setup and calibration T0a/T0b/T0c-local — **done 2026-11-12** | T0 | — | — | passed |
+| 4 | **Diagnose the 2026-11-13 failure bursts** (04:23 and 06:27 UTC; CUDA launch failures; T3 crash at step 460): `dmesg`/Xid, `nvidia-smi -q`, other processes on those GPUs. Record cause and remedy | — | — | 0 | cause in `RUN_LOG.md` |
+| 5 | *[parallel]* Selection-side compute, in this order: **VisNec** (+ fidelity check) → ICONS → XMAS → CoIDO; produce 10%, 5%, 20% selections each | T12, T4, T9, T10 | P0 | up to 4 | `record_ids.json` + `selection_meta.json` per method × budget |
+| 6 | **VisNec 10% t17**, then 5% t17, then 20% t17 + evaluation (required) | T12 | P4, VisNec selections | 1 each | 3 rows + `VISNEC_FIDELITY.md` |
+| 7 | ICONS 10%, 5%, 20% t17 + evaluation | T4 | P4, ICONS selections | 1 each | 3 rows + `ICONS_FIDELITY.md` |
+| 8 | XMAS 10%, 5%, 20% t17 + evaluation | T9 | P4, XMAS selections | 1 each | 3 rows + `XMAS_FIDELITY.md` |
+| 9 | CoIDO 10%, 5%, 20% t17 + evaluation | T10 | P4, CoIDO selections | 1 each | 3 rows + `COIDO_FIDELITY.md` |
+| 10 | **T0d 13B calibration** (as soon as we post the 13B reference; see contract §5) | T0d | 13B reference on HF | 1 (eval) + 2 (retrain) | (a) and (b) pass |
+| 11 | **13B transfer, seed 17:** Uniform, DataTailor, COINCIDE at 5% and 10%; then VisNec/ICONS/XMAS/CoIDO 10% | T13 | P10 | 2 per run | rows + checkpoints |
+| 12 | Full-data reference (660,763 records, 5,162 steps, seed 17; multi-GPU allowed, global batch 128) + evaluation | T8 | P4; start when ≥4 GPUs are free together | 4–8 | step 5,162; row |
+| 13 | Seeds 29 and 43 for the P6–P9 cells (10% first) | T12, T4, T9, T10 | P6–P9 | 1 each | rows |
+| 14 | Retry the 16 failed T5 extended gaps (after P4), then Uniform 20% t29 | T5, T2 | P4 | 1 each | rows |
+| 15 | *(optional)* Faithful LESS 10% t17; PreSel-adapted plan (approval first) | T6, T11 | P4 | 1 each | rows + fidelity notes |
+| — | ~~DataTailor 15% t17 (T3), source-sqrt 5/20% (T7)~~ — dropped 2026-11-13 | — | — | — | — |
+| 16 | Hand-back: `results/coauthor/*`, fidelity notes, HF uploads, pull request | — | everything above that ran | 0 | PR opened |
 
 Continuously: evaluate every new checkpoint (core four, then extended eight) as soon as it finishes; log every attempt
 (including failures and GPU-hours) in `RUN_LOG.md` the moment it ends. A failed run is retried once as a new attempt
 after diagnosing the cause; a second failure → stop that item and ask.
 
-Expected first-day layout on 8 GPUs: GPU0–1 P1, GPU2 P2, GPU3 P3, GPU4–7 P4. As soon as P1+P3 pass, freed GPUs take P5
-then P6; once P2 passes, P7 and P8 start and P4's finished selections feed P9–P12.
+Layout from 2026-11-13: after P4, up to 4 GPUs on selection-side compute (P5) and the rest on students as selections
+finish (P6–P9); T13 pairs of GPUs once T0d passes; T8 when ≥4 GPUs are free together.
 
 ## 4. Lessons learned (read before running anything)
 **Protocol and scoring**

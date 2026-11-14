@@ -19,6 +19,29 @@ explicit instruction from the project lead, ask the lead. Machine-readable copy:
   and locally scored extended tasks additionally require their local T0c calibration.
   Do not assign scores to deferred metrics or omit a selector's prescribed quality judge.
 
+## 1a. Project-lead amendment — 2026-11-13 (supersedes the earlier task order; read first)
+The lead's study plan changed on 2026-11-13. Where this section conflicts with older text below, **this section wins**.
+1. **Coverage before seeds.** Every planned (method × budget × base model) cell needs at least one qualified number.
+   Run **training seed 17 first** for every new cell; seeds 29/43 are lower priority and come after all seed-17 cells.
+   1–2 seeds per cell are acceptable; always report the seed count. (Still never report only the best seed of a cell
+   that has more seeds.)
+2. **Budgets are 5%, 10% and 20%.** 15% is dropped from the plan: **T3 (DataTailor 15% t17) is cancelled** (its failed
+   attempt stays in `RESULTS.csv`), and no new 15% runs or 15% retries are started. Existing 15% rows stay as they are.
+3. **New baselines go straight to all three budgets.** ICONS (T4), VisNec (T12), XMAS (T9) and CoIDO (T10): 10% → 5% →
+   20%, seed 17 each; the old "ask the lead after 10%" checkpoint (P13) is removed. Score/feature once where the official
+   method allows and cut at each budget with its own official procedure (keep realised K; never top up).
+4. **Second base model: LLaVA-1.5-13B (new T13).** Our own method variants already train at 13B on our cluster; you own
+   the **baseline side** of 13B: train LLaVA-1.5-13B on the existing provided selections of Uniform, DataTailor and
+   COINCIDE at 5% and 10% (seed 17), then the new faithful baselines at 10%. Same recipe (§3.2), same evaluation (§3.6).
+   13B does not fit one A100 40GB with per-device batch 4 (our L40S runs peak at 39 GiB allocated / 43.7 GiB reserved),
+   so T13 is the **only other task allowed two GPUs**: ZeRO-3 over 2 GPUs, per-device 4 × accumulation 16 × world 2 =
+   global 128. Disclose the layout in every T13 row. T13 students wait for gate **T0d** (§5).
+5. **Diagnose before retrying.** On 2026-11-13, 16/24 extended-evaluation attempts and the T3 training run failed in two
+   simultaneous bursts (04:23 and 06:27 UTC; "CUDA launch failure"). Before any retry or new long run, find the cause
+   (GPU/driver Xid events in `dmesg`/`nvidia-smi -q`, other users' processes on the same GPUs, memory pressure) and record
+   it in `RUN_LOG.md`. Prefer GPUs no other workload uses.
+6. **Judge deferral unchanged** (LLaVA-W, MM-Vet stay deferred).
+
 ## 2. Inputs (read-only; verify every hash before use)
 | Input | Location / identity | Verification |
 |---|---|---|
@@ -27,6 +50,7 @@ explicit instruction from the project lead, ask the lead. Machine-readable copy:
 | 16 provided selections + eligible pool | HF dataset repo `submissionpaper1234/trimdata-baseline-selections` | `SHA256SUMS`, `selection_meta.json`, `index/selections.csv` |
 | Training data | `llava_v1_5_mix665k.json`, HF `liuhaotian/LLaVA-Instruct-150K` @ `9d451dc7629cfe0469f6ae4432b765cd603d5fcb` (sha256 `ce959ce6…af6cf8`), plus the official LLaVA-1.5 image folders `coco/train2017`, `gqa/images`, `ocr_vqa/images`, `textvqa/train_images`, `vg/VG_100K{,_2}` | `scripts/reconstruct_records.py` must reproduce each selection's `records.json` sha256 |
 | Base model | `lmsys/vicuna-7b-v1.5` @ `3321f76e3f527bd14065daf69dad9344000a201d`; `openai/clip-vit-large-patch14-336` @ `ce19dc912ca5cd21c8a653c79e251e808ccabcd1`; stage-1 projector `liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-7b-v1.5` @ `5414da88308e4287a29f2e9609256458afb0a981` | download with `--revision <sha>`; these are also the current `main` revisions |
+| Base model, 13B (T13 only) | `lmsys/vicuna-13b-v1.5` @ `c8327bf999adbd2efe2e75f6509fa01436100dc2`; same CLIP tower; stage-1 projector `liuhaotian/llava-v1.5-mlp2x-336px-pretrain-vicuna-13b-v1.5` @ `e362f049527e677c163c89a4449c780256e4beb8` | download with `--revision <sha>` |
 | LLaVA code | `haotian-liu/LLaVA` @ `c121f0432da27facab705978f83c4ada465e46fd`. The `llava/` package is vendored under `src/collaboration/published-foundation-20261022/reference_sources/LLaVA/c121…/` and used by the portable scripts by default; clone the repo at this commit as well for its `scripts/` (e.g. `scripts/convert_gqa_for_eval.py`, `scripts/v1_5/eval/*.sh`) | `git rev-parse HEAD` |
 | Environment | `env/requirements-native-env.txt` (Python 3.10.19, torch 2.1.2+cu121, transformers 4.37.2, peft 0.7.1, deepspeed 0.12.6, **xformers 0.0.23.post1**) | `pip freeze` diff in `CALIBRATION_REPORT.md` |
 | Evaluation inputs | LLaVA `eval.zip` (c121 instructions) + official benchmark images; hashes in `docs/EVAL_INPUTS.md` | hashes |
@@ -54,7 +78,7 @@ If any hash does not match, **stop** and report; never substitute a "similar" fi
    both `seed` and `data_seed`. All of this is hard-coded in `train_portable.py`; do not edit it.
 3. **One run per GPU.** Every provided run is single-GPU: per-device batch 4 × accumulation 32. Run up to eight
    independent runs side by side, one per GPU (`CUDA_VISIBLE_DEVICES=i`). Multi-GPU data parallelism is allowed
-   **only** for T8 (full-data reference), with per-device × accumulation × world size = 128 (`torchrun ... --allow-multi-gpu`).
+   **only** for T8 (full-data reference) and T13 (13B, exactly 2 GPUs: 4 × 16 × 2), with per-device × accumulation × world size = 128 (`torchrun ... --allow-multi-gpu`).
 4. **Exactly one natural epoch.** A run is complete only if its final global step equals `natural_steps`
    (`train_portable.py --expected-steps` enforces it):
 
@@ -62,7 +86,7 @@ If any hash does not match, **stop** and report; never substitute a "similar" fi
    |---|---|---|
    | 5% | 33,032 (COINCIDE 33,038) | 258 |
    | 10% | 66,076 (DataTailor 66,071) | 516 |
-   | 15% | 99,108 | 774 |
+   | 15% (dropped 2026-11-13; existing rows only) | 99,108 | 774 |
    | 20% | 132,147 (COINCIDE 132,152) | 1,032 |
    | 100% | 660,763 | 5,162 |
 5. **Selected-data budget ≠ compute budget.** Keep each method's realised K (DataTailor 66,071 at 10%; COINCIDE
@@ -161,32 +185,41 @@ Capacity is ≈190 GPU-h per day; the full roster in §6 is on the order of 900�
     (1.0961, 1.0100, 0.8531, 0.8942, 0.8452, 0.9459). Two consecutive deviations → stop and diagnose.
   * **Final:** global step 516; core average within ±0.30 of 65.22 (84.56 / 55.45 / 53.77 / 67.08); no bank off by
     more than ±1.0.
+* **T0d — 13B calibration** (unlocks T13 students; added 2026-11-13). We provide one 13B reference trained on one L40S
+  with the same recipe: LLaVA-1.5-13B on `selections/uniform/b05/sel1235`, seed 17, 258 steps (checkpoint, `trainer_state.json`
+  and core-four scores will be added to the HF checkpoint repo under `13b/uniform/b05/sel1235-t17/`; until then T0d waits).
+  (a) Evaluation: re-evaluate the provided 13B checkpoint with §3.6 (`--model-base` = Vicuna-13B); pass as T0a (avg ±0.10,
+  every bank ±0.30). (b) Training: retrain the same cell with the 2-GPU T13 layout; losses at steps 10–60 within ±0.05 of the
+  reference `trainer_state.json`; final core average within ±0.50, no bank off by more than ±1.0. Record peak memory per GPU.
+  If the 2-GPU layout does not reproduce, **stop and ask** (do not change per-device batch or accumulation on your own).
+  A passing T0d (b) retrain is also the T13 row for `uniform/b05/sel1235` seed 17 (do not train it twice).
 * On any gate failure: **stop** the dependent tasks and report the deltas, environment (`pip freeze`), GPU/driver and
   logs in `CALIBRATION_REPORT.md`. Tasks whose gate passed may continue.
 
 ## 6. Tasks
-Execution sequence (binding): `AGENTS.md` §3a. Summary: T0 → T1 → T5 → T2 → T3 → T4 (10%) → T12 → T9 → T10 → lead
-checkpoint → T8 → T4 (5%/20%) → approved extra budgets → optional T6, T7, T11. Selection-side compute of T4/T12/T9/T10 runs in
-parallel from day 0.
+Execution sequence (binding, amended 2026-11-13): `AGENTS.md` §3a. Summary: failure diagnosis → T12 VisNec → T4 ICONS →
+T9 XMAS → T10 CoIDO, each 10% → 5% → 20% with seed 17 → T13 (13B, after T0d) → T8 full data → seeds 29/43, T5 gap retries, T2
+→ optional T6, T11. T3 is cancelled. Selection-side compute of T12/T4/T9/T10 runs in parallel.
 
 | ID | Task | Gate | Inputs | Deliverable | Rough A100 GPU-h |
 |---|---|---|---|---|---|
 | T0 | Calibration T0a, T0b, T0c (§5) | — | 2 checkpoints, 1 selection | 3 calibration rows + `CALIBRATION_REPORT.md` | ~25 |
 | T1 | Core four + extended eight for COINCIDE 20% t29 and t43; extended eight for COINCIDE 20% t17 | T0a, T0c | `coincide/b20/selfixed-t{17,29,43}` | 3 rows | ~15 |
 | T2 | Train + evaluate **Uniform 20% t29** (`selections/uniform/b20/sel1235`, K=132,147, 1,032 steps) | T0b | selection | checkpoint + row | ~25 |
-| T3 | Train + evaluate **DataTailor 15% t17** (`selections/datatailor/b15/sel1234`, K=99,108, 774 steps) | T0b | selection | checkpoint + row | ~20 |
-| T4 | **ICONS, faithful** (official code + defaults: its warm-up, gradient features, influence-consensus selection over its prescribed target tasks). 10% × seeds 17/29/43 first; then 5% and 20% × 3 seeds | selection: none; students: T0b | pool ids, official repo | 3 selections, 9 checkpoints, rows, `ICONS_FIDELITY.md` | ~150–250 |
+| T3 (**cancelled 2026-11-13**: 15% dropped) | ~~Train + evaluate DataTailor 15% t17~~ (`selections/datatailor/b15/sel1234`, K=99,108, 774 steps) | T0b | selection | checkpoint + row | ~20 |
+| T4 | **ICONS, faithful** (official code + defaults: its warm-up, gradient features, influence-consensus selection over its prescribed target tasks). **Amended 2026-11-13:** 10%, 5%, 20% with seed 17 first; seeds 29/43 later | selection: none; students: T0b | pool ids, official repo | 3 selections, 9 checkpoints, rows, `ICONS_FIDELITY.md` | ~150–250 |
 | T5 | Extended eight for every provided checkpoint that lacks it (list below) and for every new checkpoint from T2–T4, T8–T10 | T0a, T0c | checkpoints | rows | ~3 each |
-| T12 | **VisNec, faithful (required)** — closest prior art to the project's visual-necessity filter. Official code `DMK041218/VisNec` @ `d894598ef9ba3e03da847a47464185c6262d230f`: compute VisNec scores with `scripts/cal_visnec.py` exactly as in `scripts/cal_visnec.sh` (Stage-1 model = Vicuna-7B-v1.5 + stage-1 projector, its bf16/batch settings) on the 660,763 eligible records; select with `scripts/task_distribution.py` unchanged except paths and `TOP_RATIO = 0.10` (20 MiniBatchKMeans clusters of all-MiniLM-L6-v2 instruction embeddings, random_state 42, top 10% per cluster by VisNec). Keep the realised K (sum of per-cluster int(n×0.10), slightly below 66,076) and report it; never top up. Deterministic selection (no selection seed). **Fidelity check first (cheap):** also run `TOP_RATIO = 0.15` on the full `llava_v1_5_mix665k.json` and report the overlap with the authors' released `llava_v1.5-7b-top15.json` (HF dataset `aaakiyasuqqqa/VisNec`); stop and ask if it is far below ~90%. Then 10% × seeds 17/29/43 with `train_portable.py` (natural steps of the realised K) + core/extended evaluation. Label `VisNec` (disclose: eligible-pool restriction and 10% ratio); any other deviation → `VisNec-adapted`. 5%/20% only if the lead approves at the P13 checkpoint | selection: none; students: T0b | pool ids, official repo, released top-15 subset | selection, 3 checkpoints, rows, `VISNEC_FIDELITY.md` | ~80–160 |
-| T9 | **XMAS, faithful** (official code: proxy training with its released proxy config, cross-modal alignment trajectories over its checkpoints, clustering and stability sampling). 10% × seeds 17/29/43. Known release defects to fix and disclose (do not change the method): `cluster_and_sample.sh` defines `BUDGET` but passes `PERCENTAGE`; the stability path's `random.sample` ignores the CLI seed; the clustering script silently skips checkpoints whose metrics fail to load (must fail instead) | selection: none; students: T0b | pool ids, official repo | selection(s), 3 checkpoints, rows, `XMAS_FIDELITY.md` | ~120–200 |
-| T10 | **CoIDO, faithful** (official code: CLIP features, ImageReward and CLIP scores, LLM quality judge, stage-1 scorer trained on the paper's 20% random sample, stage-2 selection). 10% × seeds 17/29/43. Record the LLM judge model/version/cost; the README notes the release omits the paper's similarity filtering — if the release differs from the paper, label the row `CoIDO-release` and describe it. AGPL-3.0: keep its code in its own repository/directory | selection: none; students: T0b | pool ids, official repo, LLM API | selection, 3 checkpoints, rows, `COIDO_FIDELITY.md` | ~100–150 + API |
+| T12 | **VisNec, faithful (required)** — closest prior art to the project's visual-necessity filter. Official code `DMK041218/VisNec` @ `d894598ef9ba3e03da847a47464185c6262d230f`: compute VisNec scores with `scripts/cal_visnec.py` exactly as in `scripts/cal_visnec.sh` (Stage-1 model = Vicuna-7B-v1.5 + stage-1 projector, its bf16/batch settings) on the 660,763 eligible records; select with `scripts/task_distribution.py` unchanged except paths and `TOP_RATIO = 0.10` (20 MiniBatchKMeans clusters of all-MiniLM-L6-v2 instruction embeddings, random_state 42, top 10% per cluster by VisNec). Keep the realised K (sum of per-cluster int(n×0.10), slightly below 66,076) and report it; never top up. Deterministic selection (no selection seed). **Fidelity check first (cheap):** also run `TOP_RATIO = 0.15` on the full `llava_v1_5_mix665k.json` and report the overlap with the authors' released `llava_v1.5-7b-top15.json` (HF dataset `aaakiyasuqqqa/VisNec`); stop and ask if it is far below ~90%. Then (amended 2026-11-13) 10%, 5% and 20% (`TOP_RATIO` 0.10 / 0.05 / 0.20, same scores and clusters) with seed 17 first, seeds 29/43 later, with `train_portable.py` (natural steps of the realised K) + core/extended evaluation. Label `VisNec` (disclose: eligible-pool restriction and 10% ratio); any other deviation → `VisNec-adapted`. | selection: none; students: T0b | pool ids, official repo, released top-15 subset | selection, 3 checkpoints, rows, `VISNEC_FIDELITY.md` | ~80–160 |
+| T9 | **XMAS, faithful** (official code: proxy training with its released proxy config, cross-modal alignment trajectories over its checkpoints, clustering and stability sampling). Amended 2026-11-13: 10%, 5%, 20% with seed 17 first; seeds 29/43 later. Known release defects to fix and disclose (do not change the method): `cluster_and_sample.sh` defines `BUDGET` but passes `PERCENTAGE`; the stability path's `random.sample` ignores the CLI seed; the clustering script silently skips checkpoints whose metrics fail to load (must fail instead) | selection: none; students: T0b | pool ids, official repo | selection(s), 3 checkpoints, rows, `XMAS_FIDELITY.md` | ~120–200 |
+| T10 | **CoIDO, faithful** (official code: CLIP features, ImageReward and CLIP scores, LLM quality judge, stage-1 scorer trained on the paper's 20% random sample, stage-2 selection). Amended 2026-11-13: 10%, 5%, 20% with seed 17 first; seeds 29/43 later. Record the LLM judge model/version/cost; the README notes the release omits the paper's similarity filtering — if the release differs from the paper, label the row `CoIDO-release` and describe it. AGPL-3.0: keep its code in its own repository/directory | selection: none; students: T0b | pool ids, official repo, LLM API | selection, 3 checkpoints, rows, `COIDO_FIDELITY.md` | ~100–150 + API |
+| T13 | **LLaVA-1.5-13B transfer (added 2026-11-13).** Train 13B (pins in §2, same recipe, 2-GPU layout of §1a) on existing provided selections, seed 17: `uniform/b05/sel1235`, `uniform/b10/sel1234`, `datatailor/b05/sel1234`, `datatailor/b10/sel1234`, `coincide/b05/selfixed`, `coincide/b10/sel1234` (realised K; 258 / 516 steps). Then the new faithful baselines' 10% selections (VisNec, ICONS, XMAS, CoIDO) at 13B, seed 17. Core four + local extended. Rows carry `base_model=llava-1.5-13b` and the GPU layout in `notes`; checkpoints under `13b/<method>/<bNN>/...`. 20% and extra seeds later | T0d | selections, 13B pins | ≈10 checkpoints, rows | ~10 per 5% run, ~20 per 10% run (2 GPUs) + eval |
 | T8 | **Full-data reference**: all 660,763 eligible records (`pool/pool_record_ids.json`), seed 17, 5,162 steps; multi-GPU allowed (§3.3); record the layout | T0b | pool | checkpoint + row (core + extended) | ~80–120 |
 | T6 (optional) | **Faithful LESS** (official pipeline at the pin, paper defaults: LoRA warm-up, Adam-preconditioned projected gradients, its target-task dev sets), 10% × 3 seeds; `less_approx` keeps its own label | students: T0b | pool, official repo | selection, 3 checkpoints, rows, `LESS_FIDELITY.md` | ~100 |
 | T7 (optional) | **Source-sqrt** at 5% and 20% (selector `src/experiments/root_native_campaign_v7_20261024/selection.py`, method `source_sqrt`, selection seed 1234), 3 seeds each | T0b | pool | 2 selections, 6 checkpoints, rows | ~90 |
 | T11 (optional, approval first) | **PreSel-adapted**: PreSel selects images before instructions exist; on this pool it is necessarily an adaptation. Write the adaptation plan (task/source mapping, image-level → conversation-level mapping, K) and get the lead's approval **before** spending compute; 10% × 3 seeds | approval, T0b | official repo | plan, selection, 3 checkpoints, rows, `PRESEL_FIDELITY.md` | ~100 |
 
-**After T4/T12/T9/T10 have 10% results:** report them and ask the lead which one or two methods get 5%/20% runs. Do not
-start budget curves for XMAS or CoIDO on your own.
+**After T4/T12/T9/T10 have 10% results:** post the numbers in `RUN_LOG.md` and continue to 5%/20% (amended 2026-11-13; no
+approval stop).
 
 **T5 list (from the HF repo contents, 2026-11-11).** Missing all eight extended benchmarks (19):
 `coincide/b05/selfixed-t29,-t43`; `coincide/b20/selfixed-t17,-t29,-t43`; `datatailor/b05/sel1234-t29,-t43`;
@@ -229,7 +262,7 @@ images, tokens or API keys.
 * Any gate fails, or any input hash does not match.
 * An official method cannot run on this pool or model without changing its selection unit, features, defaults or
   target sets; or the release contradicts the paper in a way that changes the method.
-* A run needs a different global batch, step count or GPU layout than §3.3–§3.4 allow.
+* A run needs a different global batch, step count or GPU layout than §3.3–§3.4 and §1a.4 allow.
 * A result looks implausible (e.g. core average < 60 at 10%, or > 2 points from comparable baselines) before you have
   checked implementation and evaluation correctness; or POPE yes-ratio > 0.55 in any category.
 * You want to add or drop any cell, budget or benchmark, or the projected cost of a task exceeds twice its estimate.
